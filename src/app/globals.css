@@ -1,0 +1,503 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,600;1,9..144,500&family=Source+Serif+4:ital,wght@0,400;0,600;1,400&family=Inter:wght@400;500;600&display=swap");
+@import "tailwindcss";
+
+/*
+ * Système de design Plot — porté du prototype de référence (marge-prototype),
+ * corrigé selon le cahier des charges v2 : le bandeau d'en-tête garde une
+ * couleur soutenue, le reste de l'interface est sur fond clair.
+ */
+:root {
+  --plot-ink: #5a3a2a; /* texte — encre brune */
+  --plot-header-bg: #fce8a9; /* bandeau d'en-tête — beige soutenu */
+  --plot-bg: #fffbf1; /* fond général de l'app — beige très clair */
+  --plot-card-bg: #fdf3d6; /* fond des cartes — beige clair */
+  --plot-accent: #e8823f; /* signature / boutons / tampons — orange */
+  --plot-accent-2: #df7e55; /* accent secondaire — terracotta */
+  --plot-violet: #c9aedb; /* étoiles / points de notation — violet clair */
+  --plot-blue: #6fa8b0; /* codes de classification des salons — bleu */
+  --plot-line: #ecd9a8;
+  --plot-muted: #8a8270;
+  --plot-muted-2: #6b6455;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--plot-bg);
+  color: var(--plot-ink);
+  font-family: "Source Serif 4", serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+button,
+input,
+textarea {
+  font-family: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--plot-accent);
+  outline-offset: 2px;
+}
+
+a {
+  color: inherit;
+}
+
+/* Coquille générale ------------------------------------------------- */
+
+.plot-shell {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 0 20px 60px;
+}
+
+.plot-shell-etroit {
+  max-width: 420px;
+}
+
+.plot-chargement {
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  color: var(--plot-muted);
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* En-tête / bandeau -------------------------------------------------- */
+
+.plot-header {
+  background: var(--plot-header-bg);
+  padding: 26px 20px 22px;
+  margin-bottom: 28px;
+}
+
+.plot-header-inner {
+  max-width: 640px;
+  margin: 0 auto;
+}
+
+.plot-marque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.plot-mark-img {
+  width: 200px;
+  max-width: 70%;
+  height: auto;
+  display: block;
+}
+
+.plot-tagline {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--plot-ink);
+  margin: 6px 0 0;
+  opacity: 0.75;
+}
+
+.plot-nav {
+  display: flex;
+  justify-content: center;
+  gap: 4px;
+  margin-top: 20px;
+}
+
+.plot-nav-btn {
+  background: none;
+  border: none;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.3px;
+  color: var(--plot-muted);
+  padding: 8px 4px;
+  margin: 0 11px;
+  border-bottom: 2px solid transparent;
+  transform: translateY(1px);
+}
+
+.plot-nav-btn.active {
+  color: var(--plot-ink);
+  border-bottom-color: var(--plot-accent);
+}
+
+.plot-header-compte {
+  display: flex;
+  justify-content: center;
+  margin-top: 14px;
+}
+
+.plot-lien-deconnexion {
+  background: none;
+  border: none;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  letter-spacing: 0.3px;
+  color: var(--plot-muted);
+  text-decoration: underline;
+  padding: 0;
+}
+
+.plot-lien-deconnexion:hover {
+  color: var(--plot-ink);
+}
+
+/* Profil --------------------------------------------------------------- */
+
+.plot-profil {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 22px;
+}
+
+.plot-avatar {
+  border-radius: 50%;
+  color: var(--plot-bg);
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.plot-profil-nom {
+  font-family: "Fraunces", serif;
+  font-size: 19px;
+  margin: 0;
+  background: none;
+  border: none;
+  color: var(--plot-ink);
+  padding: 0;
+  cursor: text;
+  text-align: left;
+}
+
+.plot-profil-nom-input {
+  font-family: "Fraunces", serif;
+  font-size: 19px;
+  border: none;
+  border-bottom: 1px solid var(--plot-accent);
+  background: none;
+  color: var(--plot-ink);
+  padding: 0;
+  width: 100%;
+}
+
+.plot-profil-bio {
+  font-family: "Inter", sans-serif;
+  font-size: 12.5px;
+  color: var(--plot-muted-2);
+  margin: 3px 0 0;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0;
+  cursor: text;
+  max-width: 360px;
+}
+
+.plot-profil-bio-input {
+  font-family: "Inter", sans-serif;
+  font-size: 12.5px;
+  color: var(--plot-ink);
+  margin: 3px 0 0;
+  border: none;
+  border-bottom: 1px solid var(--plot-accent);
+  background: none;
+  padding: 0;
+  width: 100%;
+  max-width: 360px;
+  resize: none;
+}
+
+.plot-profil-champ-erreur {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  color: var(--plot-accent);
+  margin: 4px 0 0;
+}
+
+.plot-stats {
+  display: flex;
+  gap: 22px;
+  margin-bottom: 24px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed var(--plot-line);
+}
+
+.plot-stat-n {
+  font-family: "Fraunces", serif;
+  font-size: 20px;
+  display: block;
+}
+
+.plot-stat-l {
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--plot-muted);
+}
+
+/* Panneaux / cartes ------------------------------------------------------ */
+
+.plot-panneau {
+  background: var(--plot-card-bg);
+  border: 1px dashed var(--plot-line);
+  border-radius: 6px;
+  padding: 18px 20px;
+}
+
+.plot-panneau-titre {
+  font-family: "Fraunces", serif;
+  font-size: 15px;
+  margin: 0;
+}
+
+.plot-panneau-sous {
+  font-family: "Inter", sans-serif;
+  font-size: 11.5px;
+  color: var(--plot-muted-2);
+  margin: 2px 0 0;
+}
+
+.plot-panneau-erreur {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: var(--plot-accent);
+  margin: 10px 0 0;
+}
+
+.plot-panneau-info {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: var(--plot-blue);
+  margin: 10px 0 0;
+}
+
+.plot-card {
+  position: relative;
+  background: var(--plot-card-bg);
+  border-radius: 2px;
+  padding: 14px 16px;
+  border: 1px solid var(--plot-line);
+}
+
+/* Formulaires ------------------------------------------------------------ */
+
+.plot-champ {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 14px;
+}
+
+.plot-champ:first-of-type {
+  margin-top: 18px;
+}
+
+.plot-label {
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--plot-muted);
+}
+
+.plot-input {
+  flex: 1;
+  font-family: "Source Serif 4", serif;
+  font-size: 14px;
+  padding: 9px 12px;
+  border: 1px solid var(--plot-line);
+  border-radius: 20px;
+  background: var(--plot-bg);
+  color: var(--plot-ink);
+  width: 100%;
+}
+
+.plot-input::placeholder {
+  color: #b3a98d;
+}
+
+.plot-msg-form {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.plot-btn {
+  background: var(--plot-accent);
+  color: var(--plot-bg);
+  border: none;
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.plot-btn:hover {
+  opacity: 0.88;
+}
+
+.plot-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.plot-btn-pleine {
+  width: 100%;
+  padding: 11px 16px;
+  font-size: 13px;
+  margin-top: 20px;
+}
+
+.plot-btn-mini {
+  background: none;
+  border: 1px solid var(--plot-accent-2);
+  color: var(--plot-accent-2);
+  border-radius: 20px;
+  padding: 4px 11px;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+}
+
+.plot-btn-mini:hover {
+  background: var(--plot-accent-2);
+  color: var(--plot-bg);
+}
+
+.plot-btn-mini:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.plot-btn-secondaire {
+  background: none;
+  border: 1px solid var(--plot-line);
+  color: var(--plot-ink);
+  border-radius: 20px;
+  padding: 10px 16px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.plot-btn-secondaire:hover {
+  background: var(--plot-card-bg);
+}
+
+.plot-separateur {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 20px 0;
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--plot-muted);
+}
+
+.plot-separateur::before,
+.plot-separateur::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--plot-line);
+}
+
+.plot-lien {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: var(--plot-blue);
+  text-decoration: underline;
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.plot-lien:hover {
+  color: var(--plot-ink);
+}
+
+.plot-bascule {
+  text-align: center;
+  margin-top: 24px;
+  font-family: "Inter", sans-serif;
+  font-size: 12.5px;
+  color: var(--plot-muted-2);
+}
+
+/* Page d'authentification ------------------------------------------------ */
+
+.plot-auth-page {
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+}
+
+.plot-auth-marque {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 28px;
+}
+
+.plot-auth-box {
+  width: 100%;
+  max-width: 380px;
+  background: var(--plot-card-bg);
+  border: 1px solid var(--plot-line);
+  border-radius: 8px;
+  padding: 24px 26px 30px;
+}
+
+.plot-auth-titre {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 21px;
+  margin: 0;
+  text-align: center;
+}
+
+.plot-auth-sous {
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: var(--plot-muted-2);
+  text-align: center;
+  margin: 6px 0 0;
+}
