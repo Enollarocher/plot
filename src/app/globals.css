@@ -501,3 +501,240 @@ a {
   text-align: center;
   margin: 6px 0 0;
 }
+
+/* Étagères ---------------------------------------------------------------- */
+
+.plot-soustabs {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 14px;
+  flex-wrap: wrap;
+}
+
+.plot-soustab {
+  background: var(--plot-card-bg);
+  border: 1px solid var(--plot-line);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  color: var(--plot-muted-2);
+}
+
+.plot-soustab.active {
+  background: var(--plot-accent);
+  border-color: var(--plot-accent);
+  color: var(--plot-bg);
+}
+
+.plot-soustab-ajout {
+  margin-left: auto;
+  border-style: dashed;
+  color: var(--plot-blue);
+  border-color: var(--plot-blue);
+}
+
+.plot-panneau-tete {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.plot-codebarres {
+  color: var(--plot-ink);
+  flex-shrink: 0;
+}
+
+.plot-resultats {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 14px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--plot-line);
+}
+
+.plot-resultat {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.plot-resultat .plot-card-texte {
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-resultat .plot-titre {
+  padding-right: 0;
+  font-size: 14.5px;
+}
+
+.plot-resultat .plot-auteur {
+  margin: 1px 0 0;
+}
+
+.plot-btn-mini-fixe {
+  flex-shrink: 0;
+}
+
+.plot-lien-manuel {
+  display: block;
+  background: none;
+  border: none;
+  font-family: "Inter", sans-serif;
+  font-size: 11.5px;
+  color: var(--plot-blue);
+  text-decoration: underline;
+  padding: 12px 0 0;
+  text-align: left;
+}
+
+.plot-manuel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 10px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--plot-line);
+}
+
+.plot-input-pleine {
+  width: 100%;
+  border-radius: 6px;
+}
+
+textarea.plot-input {
+  border-radius: 12px;
+  resize: vertical;
+}
+
+.plot-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+.plot-card-corps {
+  display: flex;
+  gap: 12px;
+}
+
+.plot-card-texte {
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-cover {
+  width: 46px;
+  height: 66px;
+  object-fit: cover;
+  border-radius: 3px;
+  flex-shrink: 0;
+  background: var(--plot-line);
+}
+
+.plot-cover-swatch {
+  width: 46px;
+  height: 66px;
+  border-radius: 3px;
+  flex-shrink: 0;
+  display: block;
+}
+
+.plot-titre {
+  font-family: "Fraunces", serif;
+  font-size: 16.5px;
+  margin: 0;
+  padding-right: 44px;
+}
+
+.plot-auteur {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--plot-muted);
+  margin: 2px 0 8px;
+}
+
+.plot-note {
+  font-style: italic;
+  font-size: 13.5px;
+  color: var(--plot-muted-2);
+  margin: 0;
+}
+
+.plot-stamp {
+  position: absolute;
+  top: 10px;
+  right: 12px;
+  border: 1px dashed var(--plot-accent);
+  border-radius: 50%;
+  width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-8deg);
+}
+
+.plot-dots {
+  display: flex;
+  gap: 2px;
+}
+
+.plot-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--plot-line);
+  display: inline-block;
+}
+
+.plot-dot.on {
+  background: var(--plot-accent);
+}
+
+.plot-envie-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.plot-par {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  color: var(--plot-muted);
+}
+
+.plot-moment-form {
+  margin-bottom: 10px;
+}
+
+.plot-encours-bas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.plot-etoiles-choix {
+  display: flex;
+  gap: 3px;
+}
+
+.plot-etoile-btn {
+  background: none;
+  border: none;
+  padding: 2px;
+}
+
+.plot-etoiles {
+  display: flex;
+  gap: 2px;
+}

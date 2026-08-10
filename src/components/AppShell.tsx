@@ -6,6 +6,9 @@ import { createClient } from "@/lib/supabase/client";
 import { normaliserPseudo, pseudoValide, PSEUDO_AIDE } from "@/lib/pseudo";
 import { PlotMark } from "@/components/PlotMark";
 import { Avatar } from "@/components/Avatar";
+import { EtageresListe } from "@/components/EtageresListe";
+import type { LivreEtagere } from "@/lib/shelf";
+import type { ResultatRecherche } from "@/lib/googleBooks";
 
 export type Profil = {
   id: string;
@@ -15,7 +18,13 @@ export type Profil = {
 
 type Onglet = "activite" | "etageres" | "salons";
 
-export function AppShell({ profil: profilInitial }: { profil: Profil }) {
+export function AppShell({
+  profil: profilInitial,
+  etagereInitiale,
+}: {
+  profil: Profil;
+  etagereInitiale: LivreEtagere[];
+}) {
   const router = useRouter();
   const supabase = createClient();
 
@@ -23,11 +32,155 @@ export function AppShell({ profil: profilInitial }: { profil: Profil }) {
   const [profil, setProfil] = useState(profilInitial);
   const [deconnexionEnCours, setDeconnexionEnCours] = useState(false);
 
+  const [envie, setEnvie] = useState(
+    etagereInitiale.filter((l) => l.statut === "envie")
+  );
+  const [enCours, setEnCours] = useState(
+    etagereInitiale.filter((l) => l.statut === "en_cours")
+  );
+  const [lu, setLu] = useState(etagereInitiale.filter((l) => l.statut === "lu"));
+  const [erreurEtagere, setErreurEtagere] = useState("");
+
   async function seDeconnecter() {
     setDeconnexionEnCours(true);
     await supabase.auth.signOut();
     router.push("/login");
     router.refresh();
+  }
+
+  async function ajouterLivreAEnvie(livre: {
+    id: string;
+    titre: string;
+    auteur: string;
+    couverture_url: string | null;
+    pages: number | null;
+  }) {
+    setErreurEtagere("");
+    const { data, error } = await supabase
+      .from("user_books")
+      .insert({ user_id: profil.id, book_id: livre.id, statut: "envie" })
+      .select("id, statut, note, dernier_moment")
+      .single();
+
+    if (error || !data) {
+      setErreurEtagere(
+        error?.code === "23505"
+          ? "Ce livre est déjà sur ton étagère."
+          : "Impossible d'ajouter ce livre, réessaie."
+      );
+      return;
+    }
+
+    const nouveauLivre: LivreEtagere = {
+      id: data.id,
+      statut: "envie",
+      note: data.note,
+      dernierMoment: data.dernier_moment,
+      livre: {
+        id: livre.id,
+        titre: livre.titre,
+        auteur: livre.auteur,
+        couverture: livre.couverture_url,
+        pages: livre.pages,
+      },
+    };
+    setEnvie((l) => [nouveauLivre, ...l]);
+  }
+
+  async function ajouterResultat(item: ResultatRecherche) {
+    const { data: livre, error } = await supabase
+      .from("books")
+      .upsert(
+        {
+          google_volume_id: item.cle,
+          titre: item.titre,
+          auteur: item.auteur,
+          couverture_url: item.couverture,
+          pages: item.pages,
+          isbn: item.isbn,
+        },
+        { onConflict: "google_volume_id" }
+      )
+      .select("id, titre, auteur, couverture_url, pages")
+      .single();
+
+    if (error || !livre) {
+      setErreurEtagere("Impossible d'ajouter ce livre, réessaie.");
+      return;
+    }
+
+    await ajouterLivreAEnvie(livre);
+  }
+
+  async function ajouterManuel(donnees: {
+    titre: string;
+    auteur: string;
+    pages: number | null;
+    resume: string;
+  }) {
+    const { data: livre, error } = await supabase
+      .from("books")
+      .insert({
+        titre: donnees.titre,
+        auteur: donnees.auteur,
+        pages: donnees.pages,
+        resume: donnees.resume || null,
+      })
+      .select("id, titre, auteur, couverture_url, pages")
+      .single();
+
+    if (error || !livre) {
+      setErreurEtagere("Impossible d'ajouter ce livre, réessaie.");
+      return;
+    }
+
+    await ajouterLivreAEnvie(livre);
+  }
+
+  async function commencerLecture(id: string) {
+    const item = envie.find((i) => i.id === id);
+    if (!item) return;
+
+    setEnvie((l) => l.filter((i) => i.id !== id));
+    setEnCours((l) => [{ ...item, statut: "en_cours" }, ...l]);
+
+    const { error } = await supabase
+      .from("user_books")
+      .update({ statut: "en_cours" })
+      .eq("id", id);
+
+    if (error) {
+      // on remet l'étagère dans son état précédent en cas d'échec
+      setEnCours((l) => l.filter((i) => i.id !== id));
+      setEnvie((l) => [item, ...l]);
+      setErreurEtagere("Impossible de commencer ce livre, réessaie.");
+    }
+  }
+
+  async function ajouterMoment(id: string, texte: string) {
+    setEnCours((l) =>
+      l.map((i) => (i.id === id ? { ...i, dernierMoment: texte } : i))
+    );
+    await supabase.from("user_books").update({ dernier_moment: texte }).eq("id", id);
+  }
+
+  async function terminerLecture(id: string, note: number) {
+    const item = enCours.find((i) => i.id === id);
+    if (!item) return;
+
+    setEnCours((l) => l.filter((i) => i.id !== id));
+    setLu((l) => [{ ...item, statut: "lu", note }, ...l]);
+
+    const { error } = await supabase
+      .from("user_books")
+      .update({ statut: "lu", note })
+      .eq("id", id);
+
+    if (error) {
+      setLu((l) => l.filter((i) => i.id !== id));
+      setEnCours((l) => [item, ...l]);
+      setErreurEtagere("Impossible de terminer ce livre, réessaie.");
+    }
   }
 
   return (
@@ -69,12 +222,32 @@ export function AppShell({ profil: profilInitial }: { profil: Profil }) {
 
       <div className="plot-shell">
         {onglet === "etageres" && (
-          <ProfilSection profil={profil} onProfilChange={setProfil} />
+          <section>
+            <ProfilSection
+              profil={profil}
+              onProfilChange={setProfil}
+              nbLu={lu.length}
+              nbEnCours={enCours.length}
+              nbEnvie={envie.length}
+            />
+            {erreurEtagere && <p className="plot-panneau-erreur">{erreurEtagere}</p>}
+            <EtageresListe
+              envie={envie}
+              enCours={enCours}
+              lu={lu}
+              onCommencer={commencerLecture}
+              onMoment={ajouterMoment}
+              onTerminer={terminerLecture}
+              onAjouterResultat={ajouterResultat}
+              onAjouterManuel={ajouterManuel}
+            />
+          </section>
         )}
         {onglet === "activite" && (
           <p className="plot-chargement">
             Le fil d&apos;activité arrive à la Phase 3 — la cloche de
-            notification et les Plot Moments sont pour bientôt.
+            notification et l&apos;historique des Plot Moments sont pour
+            bientôt.
           </p>
         )}
         {onglet === "salons" && (
@@ -90,9 +263,15 @@ export function AppShell({ profil: profilInitial }: { profil: Profil }) {
 function ProfilSection({
   profil,
   onProfilChange,
+  nbLu,
+  nbEnCours,
+  nbEnvie,
 }: {
   profil: Profil;
   onProfilChange: (p: Profil) => void;
+  nbLu: number;
+  nbEnCours: number;
+  nbEnvie: number;
 }) {
   const supabase = createClient();
 
@@ -163,7 +342,7 @@ function ProfilSection({
   }
 
   return (
-    <section>
+    <>
       <div className="plot-profil">
         <Avatar pseudo={profil.pseudo} size={48} />
         <div style={{ flex: 1, minWidth: 0 }}>
@@ -218,15 +397,15 @@ function ProfilSection({
 
       <div className="plot-stats">
         <div>
-          <span className="plot-stat-n">0</span>
+          <span className="plot-stat-n">{nbLu}</span>
           <span className="plot-stat-l">Lus</span>
         </div>
         <div>
-          <span className="plot-stat-n">0</span>
+          <span className="plot-stat-n">{nbEnCours}</span>
           <span className="plot-stat-l">En cours</span>
         </div>
         <div>
-          <span className="plot-stat-n">0</span>
+          <span className="plot-stat-n">{nbEnvie}</span>
           <span className="plot-stat-l">Envie de lire</span>
         </div>
         <div>
@@ -238,11 +417,6 @@ function ProfilSection({
           <span className="plot-stat-l">Abonnés</span>
         </div>
       </div>
-
-      <p className="plot-chargement" style={{ padding: "0 0 20px" }}>
-        Les étagères (Envie de lire / En cours / Lu) et la recherche de
-        livres arrivent à la Phase 2.
-      </p>
-    </section>
+    </>
   );
 }

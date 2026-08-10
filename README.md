@@ -8,18 +8,24 @@ Le design system (couleurs, typographies, composants) est porté à l'identique
 du prototype de référence (`marge-prototype3.jsx`) et du cahier des charges
 v2 — voir `src/app/globals.css`.
 
-## État du projet — Phase 1 livrée
+## État du projet — Phases 1 & 2 livrées
 
 ✅ **Authentification** (e-mail + mot de passe, connexion Google), avec
 inscription, connexion, déconnexion, mot de passe oublié / réinitialisation.
 ✅ **Création automatique du profil** : dès qu'un compte est créé (peu
 importe la méthode), un trigger PostgreSQL crée la ligne `profiles`
 correspondante — aucune étape manuelle côté client.
-✅ Page d'accueil protégée reprenant l'en-tête, la navigation et la carte de
-profil (avatar, pseudo modifiable en ligne, bio) du prototype.
+✅ **Étagères en trois statuts** (Envie de lire / En cours / Lu), recherche
+de livre par titre/auteur/ISBN via l'API Google Books avec ajout manuel en
+repli (titre, auteur, pages, résumé), catalogue de livres partagé et
+dédupliqué entre utilisatrices.
+✅ **Plot Moments & fin de lecture automatique** : réactions libres postées
+pendant qu'un livre est « en cours », notation par étoiles à la fin sans
+aucune saisie de texte, le dernier Plot Moment devient la note affichée une
+fois le livre terminé.
 
-🚧 À venir : étagères + recherche de livres (Phase 2), fil d'activité temps
-réel (Phase 3), Book Clubs et confidentialité (Phase 4).
+🚧 À venir : fil d'activité temps réel + cloche de notification (Phase 3),
+Book Clubs, abonnements et confidentialité (Phase 4).
 
 ## 1. Installer et lancer en local
 
@@ -46,10 +52,11 @@ sur ton projet**, il faut le faire manuellement une fois :
 
 1. Ouvre le **SQL Editor** de ton projet Supabase
    (`https://supabase.com/dashboard/project/otopafjoksdmytgnqiis/sql/new`).
-2. Colle le contenu de [`supabase/migrations/0001_profiles.sql`](./supabase/migrations/0001_profiles.sql)
-   et exécute-le.
+2. Colle et exécute, **dans l'ordre**, le contenu de :
+   - [`supabase/migrations/0001_profiles.sql`](./supabase/migrations/0001_profiles.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(nouveau — Phase 2)*
 
-Ce script crée :
+`0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
   activée (lecture par toute utilisatrice connectée, modification limitée à
   soi-même) ;
@@ -61,7 +68,15 @@ Ce script crée :
   d'inscription pour vérifier la disponibilité d'un pseudo en direct, sans
   exposer la table `profiles` aux personnes non connectées.
 
-Le script est idempotent : tu peux le rejouer sans risque.
+`0002_books.sql` crée :
+- la table `books` (catalogue partagé : titre, auteur, couverture, pages,
+  résumé, isbn), dédupliquée par `google_volume_id` pour les résultats de
+  recherche — un ajout manuel crée toujours une nouvelle ligne ;
+- la table `user_books` (étagère personnelle : `statut` parmi `envie` /
+  `en_cours` / `lu`, `note`, `dernier_moment`), avec RLS limitant chaque
+  utilisatrice à sa propre étagère.
+
+Les deux scripts sont idempotents : tu peux les rejouer sans risque.
 
 ## 3. Configurer Supabase Auth (dashboard)
 
@@ -113,9 +128,33 @@ src/
   app/
     login/, signup/, forgot-password/, update-password/   pages publiques
     auth/callback/, auth/confirm/                          routes OAuth & liens e-mail
-    page.tsx                                                accueil protégée (profil)
-  components/                                               PlotMark, Avatar, AppShell, GoogleAuthButton
-  lib/supabase/                                             clients browser/server + middleware de session
-  lib/pseudo.ts                                             règles de validation du pseudo
-supabase/migrations/0001_profiles.sql                       schéma + trigger de création auto du profil
+    page.tsx                                                accueil protégée (profil + étagères)
+  components/
+    AppShell.tsx                                            état global (profil, étagères), en-tête, nav
+    EtageresListe.tsx, AjouterLivrePanel.tsx                 sous-onglets, recherche/ajout manuel
+    BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu, en cours)
+    icons/Etoile.tsx, icons/CodeBarres.tsx                    pictogrammes dessinés à la main (SVG)
+    PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
+  lib/supabase/                                               clients browser/server + middleware de session
+  lib/pseudo.ts, lib/shelf.ts, lib/googleBooks.ts              règles pseudo, types étagère, recherche Google Books
+supabase/migrations/
+  0001_profiles.sql                                           comptes & création auto du profil (Phase 1)
+  0002_books.sql                                               catalogue de livres & étagères (Phase 2)
 ```
+
+## Notes de conception — Phase 2
+
+- **Recherche** : appel direct depuis le navigateur à l'API publique Google
+  Books (`googleapis.com/books/v1/volumes`), sans clé — identique au
+  prototype. Aucune route serveur nécessaire.
+- **Déduplication du catalogue** : un livre trouvé via la recherche est
+  upserté par `google_volume_id`, donc partagé entre toutes les
+  utilisatrices qui l'ajoutent ; un ajout manuel n'est jamais dédupliqué
+  (pas d'identifiant fiable).
+- **« Ajouté par toi »** : le champ `par` du prototype (recommandation par
+  une amie) n'est pas encore branché — il dépend des abonnements (Phase 4).
+  Pour l'instant chaque livre ajouté est simplement le tien.
+- **Plot Moments** : seul le *dernier* moment posté est conservé
+  (`user_books.dernier_moment`), conformément à la règle du cahier des
+  charges. L'historique complet de chaque moment posté (pour le fil
+  d'activité) sera ajouté en Phase 3 avec la table `activity_feed`.

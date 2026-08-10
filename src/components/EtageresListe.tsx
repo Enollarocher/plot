@@ -1,0 +1,122 @@
+"use client";
+
+import { useState } from "react";
+import { BookCard } from "@/components/BookCard";
+import { EncoursCard } from "@/components/EncoursCard";
+import { AjouterLivrePanel } from "@/components/AjouterLivrePanel";
+import type { LivreEtagere } from "@/lib/shelf";
+import type { ResultatRecherche } from "@/lib/googleBooks";
+
+type SousTab = "envie" | "en_cours" | "lu";
+
+export function EtageresListe({
+  envie,
+  enCours,
+  lu,
+  onCommencer,
+  onMoment,
+  onTerminer,
+  onAjouterResultat,
+  onAjouterManuel,
+}: {
+  envie: LivreEtagere[];
+  enCours: LivreEtagere[];
+  lu: LivreEtagere[];
+  onCommencer: (id: string) => void;
+  onMoment: (id: string, texte: string) => void;
+  onTerminer: (id: string, note: number) => void;
+  onAjouterResultat: (item: ResultatRecherche) => Promise<void>;
+  onAjouterManuel: (donnees: {
+    titre: string;
+    auteur: string;
+    pages: number | null;
+    resume: string;
+  }) => Promise<void>;
+}) {
+  const [sousTab, setSousTab] = useState<SousTab>("lu");
+  const [panneauAjout, setPanneauAjout] = useState(false);
+
+  async function ajouterResultat(item: ResultatRecherche) {
+    await onAjouterResultat(item);
+  }
+
+  async function ajouterManuel(donnees: {
+    titre: string;
+    auteur: string;
+    pages: number | null;
+    resume: string;
+  }) {
+    await onAjouterManuel(donnees);
+    setPanneauAjout(false);
+  }
+
+  return (
+    <div>
+      <div className="plot-soustabs">
+        <button
+          className={sousTab === "envie" ? "plot-soustab active" : "plot-soustab"}
+          onClick={() => setSousTab("envie")}
+        >
+          Envie de lire
+        </button>
+        <button
+          className={sousTab === "en_cours" ? "plot-soustab active" : "plot-soustab"}
+          onClick={() => setSousTab("en_cours")}
+        >
+          En cours
+        </button>
+        <button
+          className={sousTab === "lu" ? "plot-soustab active" : "plot-soustab"}
+          onClick={() => setSousTab("lu")}
+        >
+          Lu
+        </button>
+        <button
+          className="plot-soustab plot-soustab-ajout"
+          onClick={() => setPanneauAjout(!panneauAjout)}
+        >
+          + Ajouter un livre
+        </button>
+      </div>
+
+      {panneauAjout && (
+        <AjouterLivrePanel
+          onAjouterResultat={ajouterResultat}
+          onAjouterManuel={ajouterManuel}
+        />
+      )}
+
+      <div className="plot-list">
+        {sousTab === "envie" &&
+          envie.map((item) => (
+            <BookCard key={item.id} item={item} onCommencer={onCommencer} />
+          ))}
+        {sousTab === "en_cours" &&
+          enCours.map((item) => (
+            <EncoursCard
+              key={item.id}
+              item={item}
+              onMoment={onMoment}
+              onTerminer={onTerminer}
+            />
+          ))}
+        {sousTab === "lu" &&
+          lu.map((item) => <BookCard key={item.id} item={item} />)}
+
+        {sousTab === "envie" && envie.length === 0 && (
+          <p className="plot-chargement">
+            Rien pour l&apos;instant — cherche un livre ci-dessus.
+          </p>
+        )}
+        {sousTab === "en_cours" && enCours.length === 0 && (
+          <p className="plot-chargement">
+            Rien en cours. Passe un livre depuis &laquo; Envie de lire &raquo;.
+          </p>
+        )}
+        {sousTab === "lu" && lu.length === 0 && (
+          <p className="plot-chargement">Rien de terminé pour l&apos;instant.</p>
+        )}
+      </div>
+    </div>
+  );
+}
