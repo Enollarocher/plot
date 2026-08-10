@@ -23,6 +23,9 @@ dédupliqué entre utilisatrices.
 pendant qu'un livre est « en cours », notation par étoiles à la fin sans
 aucune saisie de texte, le dernier Plot Moment devient la note affichée une
 fois le livre terminé.
+✅ **Photo de couverture pour les ajouts manuels** : upload vers Supabase
+Storage (bucket `couvertures`) quand le livre n'est pas trouvé via Google
+Books.
 
 🚧 À venir : fil d'activité temps réel + cloche de notification (Phase 3),
 Book Clubs, abonnements et confidentialité (Phase 4).
@@ -54,7 +57,8 @@ sur ton projet**, il faut le faire manuellement une fois :
    (`https://supabase.com/dashboard/project/otopafjoksdmytgnqiis/sql/new`).
 2. Colle et exécute, **dans l'ordre**, le contenu de :
    - [`supabase/migrations/0001_profiles.sql`](./supabase/migrations/0001_profiles.sql) *(déjà fait ✅)*
-   - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(nouveau — Phase 2)*
+   - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(nouveau)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -76,7 +80,14 @@ sur ton projet**, il faut le faire manuellement une fois :
   `en_cours` / `lu`, `note`, `dernier_moment`), avec RLS limitant chaque
   utilisatrice à sa propre étagère.
 
-Les deux scripts sont idempotents : tu peux les rejouer sans risque.
+`0003_storage_couvertures.sql` crée :
+- le bucket Storage `couvertures` (public en lecture, 5 Mo max, JPEG / PNG /
+  WEBP / GIF uniquement) ;
+- les policies RLS sur `storage.objects` : chaque utilisatrice ne peut
+  écrire/modifier/supprimer que dans son propre dossier (`<user_id>/...`),
+  la lecture est publique (nécessaire pour afficher les couvertures).
+
+Les trois scripts sont idempotents : tu peux les rejouer sans risque.
 
 ## 3. Configurer Supabase Auth (dashboard)
 
@@ -137,9 +148,11 @@ src/
     PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
   lib/supabase/                                               clients browser/server + middleware de session
   lib/pseudo.ts, lib/shelf.ts, lib/googleBooks.ts              règles pseudo, types étagère, recherche Google Books
+  lib/storage.ts                                                upload + validation des photos de couverture
 supabase/migrations/
   0001_profiles.sql                                           comptes & création auto du profil (Phase 1)
   0002_books.sql                                               catalogue de livres & étagères (Phase 2)
+  0003_storage_couvertures.sql                                bucket + policies pour les photos de couverture
 ```
 
 ## Notes de conception — Phase 2

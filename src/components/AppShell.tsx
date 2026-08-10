@@ -7,8 +7,9 @@ import { normaliserPseudo, pseudoValide, PSEUDO_AIDE } from "@/lib/pseudo";
 import { PlotMark } from "@/components/PlotMark";
 import { Avatar } from "@/components/Avatar";
 import { EtageresListe } from "@/components/EtageresListe";
-import type { LivreEtagere } from "@/lib/shelf";
+import type { DonneesAjoutManuel, LivreEtagere } from "@/lib/shelf";
 import type { ResultatRecherche } from "@/lib/googleBooks";
+import { televerserCouverture } from "@/lib/storage";
 
 export type Profil = {
   id: string;
@@ -68,7 +69,7 @@ export function AppShell({
           ? "Ce livre est déjà sur ton étagère."
           : "Impossible d'ajouter ce livre, réessaie."
       );
-      return;
+      return false;
     }
 
     const nouveauLivre: LivreEtagere = {
@@ -85,6 +86,7 @@ export function AppShell({
       },
     };
     setEnvie((l) => [nouveauLivre, ...l]);
+    return true;
   }
 
   async function ajouterResultat(item: ResultatRecherche) {
@@ -112,12 +114,24 @@ export function AppShell({
     await ajouterLivreAEnvie(livre);
   }
 
-  async function ajouterManuel(donnees: {
-    titre: string;
-    auteur: string;
-    pages: number | null;
-    resume: string;
-  }) {
+  async function ajouterManuel(donnees: DonneesAjoutManuel) {
+    let couvertureUrl: string | null = null;
+    let erreurPhoto = "";
+
+    if (donnees.couverture) {
+      try {
+        couvertureUrl = await televerserCouverture(
+          supabase,
+          profil.id,
+          donnees.couverture
+        );
+      } catch {
+        // On n'empêche pas l'ajout du livre pour un échec d'upload : ses
+        // infos (titre, auteur...) restent plus précieuses que la photo.
+        erreurPhoto = "Livre ajouté, mais la photo n'a pas pu être envoyée.";
+      }
+    }
+
     const { data: livre, error } = await supabase
       .from("books")
       .insert({
@@ -125,6 +139,7 @@ export function AppShell({
         auteur: donnees.auteur,
         pages: donnees.pages,
         resume: donnees.resume || null,
+        couverture_url: couvertureUrl,
       })
       .select("id, titre, auteur, couverture_url, pages")
       .single();
@@ -134,7 +149,8 @@ export function AppShell({
       return;
     }
 
-    await ajouterLivreAEnvie(livre);
+    const ajoute = await ajouterLivreAEnvie(livre);
+    if (ajoute && erreurPhoto) setErreurEtagere(erreurPhoto);
   }
 
   async function commencerLecture(id: string) {

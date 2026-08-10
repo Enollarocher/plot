@@ -8,6 +8,14 @@ export type Livre = {
   pages: number | null;
 };
 
+export type DonneesAjoutManuel = {
+  titre: string;
+  auteur: string;
+  pages: number | null;
+  resume: string;
+  couverture: File | null;
+};
+
 export type LivreEtagere = {
   id: string; // id de la ligne user_books
   statut: Statut;

@@ -1,21 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { BookCover } from "@/components/BookCover";
 import { CodeBarres } from "@/components/icons/CodeBarres";
 import { rechercherGoogleBooks, type ResultatRecherche } from "@/lib/googleBooks";
+import { erreurFichierCouverture } from "@/lib/storage";
+import type { DonneesAjoutManuel } from "@/lib/shelf";
 
 export function AjouterLivrePanel({
   onAjouterResultat,
   onAjouterManuel,
 }: {
   onAjouterResultat: (item: ResultatRecherche) => Promise<void> | void;
-  onAjouterManuel: (donnees: {
-    titre: string;
-    auteur: string;
-    pages: number | null;
-    resume: string;
-  }) => Promise<void> | void;
+  onAjouterManuel: (donnees: DonneesAjoutManuel) => Promise<void> | void;
 }) {
   const [requete, setRequete] = useState("");
   const [recherche, setRecherche] = useState(false);
@@ -28,7 +25,21 @@ export function AjouterLivrePanel({
   const [mAuteur, setMAuteur] = useState("");
   const [mPages, setMPages] = useState("");
   const [mResume, setMResume] = useState("");
+  const [mCouverture, setMCouverture] = useState<File | null>(null);
+  const [mApercuUrl, setMApercuUrl] = useState<string | null>(null);
+  const [erreurPhoto, setErreurPhoto] = useState("");
   const [ajoutManuelEnCours, setAjoutManuelEnCours] = useState(false);
+
+  const inputFichierRef = useRef<HTMLInputElement>(null);
+
+  // Révoque l'URL d'aperçu précédente à chaque changement / démontage pour
+  // ne pas fuiter de mémoire (URL.createObjectURL n'est jamais libérée
+  // automatiquement par le navigateur).
+  useEffect(() => {
+    return () => {
+      if (mApercuUrl) URL.revokeObjectURL(mApercuUrl);
+    };
+  }, [mApercuUrl]);
 
   async function rechercherLivres() {
     const q = requete.trim();
@@ -56,6 +67,34 @@ export function AjouterLivrePanel({
     setResultats((r) => r.filter((x) => x.cle !== item.cle));
   }
 
+  function choisirPhoto(e: React.ChangeEvent<HTMLInputElement>) {
+    const fichier = e.target.files?.[0] || null;
+    e.target.value = ""; // permet de resélectionner le même fichier ensuite
+    if (!fichier) return;
+
+    const erreur = erreurFichierCouverture(fichier);
+    if (erreur) {
+      setErreurPhoto(erreur);
+      return;
+    }
+
+    setErreurPhoto("");
+    setMCouverture(fichier);
+    setMApercuUrl((ancien) => {
+      if (ancien) URL.revokeObjectURL(ancien);
+      return URL.createObjectURL(fichier);
+    });
+  }
+
+  function retirerPhoto() {
+    setMCouverture(null);
+    setMApercuUrl((ancien) => {
+      if (ancien) URL.revokeObjectURL(ancien);
+      return null;
+    });
+    setErreurPhoto("");
+  }
+
   async function ajouterManuel() {
     if (!mTitre.trim() || ajoutManuelEnCours) return;
     setAjoutManuelEnCours(true);
@@ -64,6 +103,7 @@ export function AjouterLivrePanel({
       auteur: mAuteur.trim() || "Auteur inconnu",
       pages: mPages ? parseInt(mPages, 10) : null,
       resume: mResume.trim(),
+      couverture: mCouverture,
     });
     setAjoutManuelEnCours(false);
     setManuel(false);
@@ -71,6 +111,7 @@ export function AjouterLivrePanel({
     setMAuteur("");
     setMPages("");
     setMResume("");
+    retirerPhoto();
   }
 
   return (
@@ -155,6 +196,42 @@ export function AjouterLivrePanel({
             value={mResume}
             onChange={(e) => setMResume(e.target.value)}
           />
+
+          <input
+            ref={inputFichierRef}
+            type="file"
+            accept="image/jpeg,image/png,image/webp,image/gif"
+            hidden
+            onChange={choisirPhoto}
+          />
+          {mApercuUrl ? (
+            <div className="plot-photo-ligne">
+              {/* eslint-disable-next-line @next/next/no-img-element -- aperçu local (URL.createObjectURL), jamais distant */}
+              <img className="plot-cover" src={mApercuUrl} alt="Aperçu de la couverture" />
+              <div className="plot-photo-actions">
+                <button
+                  type="button"
+                  className="plot-lien"
+                  onClick={() => inputFichierRef.current?.click()}
+                >
+                  Changer la photo
+                </button>
+                <button type="button" className="plot-lien" onClick={retirerPhoto}>
+                  Retirer
+                </button>
+              </div>
+            </div>
+          ) : (
+            <button
+              type="button"
+              className="plot-btn-secondaire"
+              onClick={() => inputFichierRef.current?.click()}
+            >
+              Choisir une photo de couverture
+            </button>
+          )}
+          {erreurPhoto && <p className="plot-profil-champ-erreur">{erreurPhoto}</p>}
+
           <button
             className="plot-btn plot-btn-pleine"
             onClick={ajouterManuel}

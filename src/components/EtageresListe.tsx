@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BookCard } from "@/components/BookCard";
 import { EncoursCard } from "@/components/EncoursCard";
 import { AjouterLivrePanel } from "@/components/AjouterLivrePanel";
-import type { LivreEtagere } from "@/lib/shelf";
+import type { DonneesAjoutManuel, LivreEtagere } from "@/lib/shelf";
 import type { ResultatRecherche } from "@/lib/googleBooks";
 
 type SousTab = "envie" | "en_cours" | "lu";
@@ -26,12 +26,7 @@ export function EtageresListe({
   onMoment: (id: string, texte: string) => void;
   onTerminer: (id: string, note: number) => void;
   onAjouterResultat: (item: ResultatRecherche) => Promise<void>;
-  onAjouterManuel: (donnees: {
-    titre: string;
-    auteur: string;
-    pages: number | null;
-    resume: string;
-  }) => Promise<void>;
+  onAjouterManuel: (donnees: DonneesAjoutManuel) => Promise<void>;
 }) {
   const [sousTab, setSousTab] = useState<SousTab>("lu");
   const [panneauAjout, setPanneauAjout] = useState(false);
@@ -40,12 +35,7 @@ export function EtageresListe({
     await onAjouterResultat(item);
   }
 
-  async function ajouterManuel(donnees: {
-    titre: string;
-    auteur: string;
-    pages: number | null;
-    resume: string;
-  }) {
+  async function ajouterManuel(donnees: DonneesAjoutManuel) {
     await onAjouterManuel(donnees);
     setPanneauAjout(false);
   }

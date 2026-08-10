@@ -184,6 +184,7 @@ a {
 }
 
 .plot-profil-nom {
+  display: block;
   font-family: "Fraunces", serif;
   font-size: 19px;
   margin: 0;
@@ -196,6 +197,7 @@ a {
 }
 
 .plot-profil-nom-input {
+  display: block;
   font-family: "Fraunces", serif;
   font-size: 19px;
   border: none;
@@ -207,6 +209,7 @@ a {
 }
 
 .plot-profil-bio {
+  display: block;
   font-family: "Inter", sans-serif;
   font-size: 12.5px;
   color: var(--plot-muted-2);
@@ -220,6 +223,7 @@ a {
 }
 
 .plot-profil-bio-input {
+  display: block;
   font-family: "Inter", sans-serif;
   font-size: 12.5px;
   color: var(--plot-ink);
@@ -737,4 +741,17 @@ textarea.plot-input {
 .plot-etoiles {
   display: flex;
   gap: 2px;
+}
+
+.plot-photo-ligne {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plot-photo-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
 }
