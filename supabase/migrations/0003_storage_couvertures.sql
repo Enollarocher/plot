@@ -19,12 +19,17 @@ on conflict (id) do update set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
--- 2. RLS sur storage.objects --------------------------------------------------
+-- 2. Policies RLS sur storage.objects -----------------------------------------
 -- Chaque utilisatrice ne peut écrire/supprimer que dans son propre dossier
 -- (préfixe `<user_id>/...` du chemin) ; la lecture est publique puisque le
 -- bucket lui-même est public (les couvertures doivent s'afficher pour tout
 -- le monde, y compris sur l'étagère d'une amie plus tard).
-alter table storage.objects enable row level security;
+--
+-- Pas de `alter table storage.objects enable row level security` ici : RLS
+-- y est déjà activée par défaut chez Supabase, et cette table appartient à
+-- supabase_admin — la tenter depuis le SQL Editor échoue avec
+-- "must be owner of table objects" (42501). On ne fait donc que poser les
+-- policies, ce que le rôle du SQL Editor est bien autorisé à faire.
 
 drop policy if exists "Couvertures : lecture publique" on storage.objects;
 create policy "Couvertures : lecture publique"
