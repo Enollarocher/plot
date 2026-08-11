@@ -52,6 +52,9 @@ export function ActivEntry({
             <Etoile key={n} pleine={n <= c.note} taille={12} />
           ))}
         </span>
+        <span className="plot-activ-extrait">
+          Livre terminé {c.heure ? `à ${c.heure}` : ""}.
+        </span>
       </>
     );
   } else if (entree.type === "moment") {

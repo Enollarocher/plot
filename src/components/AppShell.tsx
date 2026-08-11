@@ -216,10 +216,15 @@ export function AppShell({
       return;
     }
 
+    const heure = new Date().toLocaleTimeString("fr-FR", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+
     await supabase.from("activity_feed").insert({
       user_id: profil.id,
       type: "termine",
-      contenu: { titre: item.livre.titre, bookId: item.livre.id, note },
+      contenu: { titre: item.livre.titre, bookId: item.livre.id, note, heure },
     });
   }
 

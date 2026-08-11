@@ -2,7 +2,12 @@ export type TypeActivite = "moment" | "termine" | "commence";
 
 export type ContenuCommence = { titre: string; bookId?: string };
 export type ContenuMoment = { titre: string; texte: string; bookId?: string };
-export type ContenuTermine = { titre: string; note: number; bookId?: string };
+export type ContenuTermine = {
+  titre: string;
+  note: number;
+  heure: string;
+  bookId?: string;
+};
 
 export type Commentaire = {
   id: string;
