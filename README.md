@@ -8,7 +8,7 @@ Le design system (couleurs, typographies, composants) est porté à l'identique
 du prototype de référence (`marge-prototype3.jsx`) et du cahier des charges
 v2 — voir `src/app/globals.css`.
 
-## État du projet — Phases 1 & 2 livrées
+## État du projet — Phases 1, 2 & 3 livrées
 
 ✅ **Authentification** (e-mail + mot de passe, connexion Google), avec
 inscription, connexion, déconnexion, mot de passe oublié / réinitialisation.
@@ -26,9 +26,13 @@ fois le livre terminé.
 ✅ **Photo de couverture pour les ajouts manuels** : upload vers Supabase
 Storage (bucket `couvertures`) quand le livre n'est pas trouvé via Google
 Books.
+✅ **Fil d'activité en temps réel via une cloche de notification** (en haut
+à droite, pas un onglet dédié) : badge avec compteur de mouvement non vu,
+réactions (cœur) et commentaires sur chaque entrée, nouvelles entrées
+poussées en direct (Supabase Realtime) chez toutes les utilisatrices
+connectées.
 
-🚧 À venir : fil d'activité temps réel + cloche de notification (Phase 3),
-Book Clubs, abonnements et confidentialité (Phase 4).
+🚧 À venir : Book Clubs, abonnements et confidentialité (Phase 4).
 
 ## 1. Installer et lancer en local
 
@@ -58,7 +62,8 @@ sur ton projet**, il faut le faire manuellement une fois :
 2. Colle et exécute, **dans l'ordre**, le contenu de :
    - [`supabase/migrations/0001_profiles.sql`](./supabase/migrations/0001_profiles.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(déjà fait ✅)*
-   - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(nouveau)*
+   - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(nouveau — Phase 3)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -87,7 +92,22 @@ sur ton projet**, il faut le faire manuellement une fois :
   écrire/modifier/supprimer que dans son propre dossier (`<user_id>/...`),
   la lecture est publique (nécessaire pour afficher les couvertures).
 
-Les trois scripts sont idempotents : tu peux les rejouer sans risque.
+`0004_activity_feed.sql` crée :
+- la table `activity_feed` (type `moment` / `termine` / `commence`, contenu
+  jsonb), alimentée automatiquement par les actions sur les étagères ;
+- `activity_reactions` (cœurs) et `activity_comments`, avec RLS lecture
+  ouverte aux utilisatrices connectées, écriture limitée à son propre nom ;
+- la colonne `profiles.dernier_vu_activite`, utilisée pour calculer le
+  badge « non vu » de la cloche ;
+- l'ajout de `activity_feed` à la publication `supabase_realtime`, pour que
+  les nouvelles entrées arrivent en direct dans l'app.
+
+Les quatre scripts sont idempotents : tu peux les rejouer sans risque.
+
+⚠️ Si Realtime est explicitement désactivé sur ton projet (Database →
+Replication), active-le pour la table `activity_feed` — la cloche
+fonctionnera quand même sans, simplement sans mise à jour en direct (il
+faudra rouvrir le panneau pour voir les nouvelles entrées).
 
 ## 3. Configurer Supabase Auth (dashboard)
 
@@ -144,16 +164,43 @@ src/
     AppShell.tsx                                            état global (profil, étagères), en-tête, nav
     EtageresListe.tsx, AjouterLivrePanel.tsx                 sous-onglets, recherche/ajout manuel
     BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu, en cours)
-    icons/Etoile.tsx, icons/CodeBarres.tsx                    pictogrammes dessinés à la main (SVG)
+    NotificationBell.tsx, ActivEntry.tsx                      cloche + panneau déroulant du fil d'activité
+    icons/Etoile.tsx, icons/CodeBarres.tsx,                   pictogrammes dessinés à la main (SVG)
+    icons/Cloche.tsx, icons/Coeur.tsx
     PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
   lib/supabase/                                               clients browser/server + middleware de session
   lib/pseudo.ts, lib/shelf.ts, lib/googleBooks.ts              règles pseudo, types étagère, recherche Google Books
   lib/storage.ts                                                upload + validation des photos de couverture
+  lib/activity.ts, lib/temps.ts                                 types du fil d'activité, formatage relatif des dates
 supabase/migrations/
   0001_profiles.sql                                           comptes & création auto du profil (Phase 1)
   0002_books.sql                                               catalogue de livres & étagères (Phase 2)
   0003_storage_couvertures.sql                                bucket + policies pour les photos de couverture
+  0004_activity_feed.sql                                      fil d'activité, réactions, commentaires, Realtime (Phase 3)
 ```
+
+## Notes de conception — Phase 3
+
+- **Cloche plutôt qu'onglet** : le prototype (`marge-prototype3.jsx`) avait
+  « Activité » comme onglet de navigation classique, mais le cahier des
+  charges v2 demande explicitement une cloche de notification en haut à
+  droite avec menu déroulant (« pas un onglet dédié »). J'ai suivi le
+  cahier, qui prime ici sur le code du prototype — l'onglet « Activité » a
+  été retiré de la navigation.
+- **Fil global, pas encore filtré par abonnements** : toute utilisatrice
+  connectée voit l'activité de tout le monde (comme le fil par défaut du
+  prototype). La restriction par abonnements/confidentialité arrive avec
+  les Book Clubs en Phase 4.
+- **Temps réel** : une seule souscription Realtime (`postgres_changes` sur
+  `activity_feed`) suffit à propager les nouvelles entrées à toutes les
+  utilisatrices connectées ; le badge s'incrémente si le panneau est fermé,
+  la liste se met à jour en direct s'il est ouvert. Réactions et
+  commentaires ne sont pas (encore) synchronisés en direct entre plusieurs
+  panneaux ouverts simultanément — rechargés à chaque ouverture.
+- **Type `message`** : prévu par le cahier des charges pour les futurs
+  messages de Book Club, mais pas encore utilisé (les salons n'existent pas
+  avant la Phase 4) — la contrainte `activity_feed_type_valide` n'accepte
+  pour l'instant que `moment` / `termine` / `commence`.
 
 ## Notes de conception — Phase 2
 

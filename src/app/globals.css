@@ -88,6 +88,7 @@ a {
 }
 
 .plot-header-inner {
+  position: relative;
   max-width: 640px;
   margin: 0 auto;
 }
@@ -754,4 +755,194 @@ textarea.plot-input {
   flex-direction: column;
   align-items: flex-start;
   gap: 4px;
+}
+
+/* Cloche de notification & fil d'activité --------------------------------- */
+
+.plot-cloche-wrap {
+  position: absolute;
+  top: 2px;
+  right: 0;
+  text-align: left;
+}
+
+.plot-cloche-btn {
+  position: relative;
+  background: none;
+  border: none;
+  color: var(--plot-ink);
+  padding: 6px;
+  display: inline-flex;
+}
+
+.plot-cloche-badge {
+  position: absolute;
+  top: 0;
+  right: 0;
+  min-width: 15px;
+  height: 15px;
+  padding: 0 3px;
+  border-radius: 999px;
+  background: var(--plot-accent);
+  color: var(--plot-bg);
+  font-family: "Inter", sans-serif;
+  font-size: 9.5px;
+  font-weight: 600;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.plot-cloche-dropdown {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  margin-top: 8px;
+  width: 320px;
+  max-width: 86vw;
+  max-height: 70vh;
+  overflow-y: auto;
+  background: var(--plot-card-bg);
+  border: 1px solid var(--plot-line);
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(90, 58, 42, 0.18);
+  z-index: 30;
+}
+
+.plot-cloche-dropdown-titre {
+  font-family: "Fraunces", serif;
+  font-size: 15px;
+  margin: 0;
+  padding: 14px 16px 10px;
+  border-bottom: 1px dashed var(--plot-line);
+}
+
+.plot-cloche-liste {
+  padding: 0 16px;
+}
+
+.plot-activ {
+  display: flex;
+  gap: 10px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--plot-line);
+}
+
+.plot-activ:last-child {
+  border-bottom: none;
+}
+
+.plot-activ-barre {
+  width: 4px;
+  border-radius: 2px;
+  align-self: stretch;
+  flex-shrink: 0;
+}
+
+.plot-activ-corps {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-activ-ligne {
+  font-size: 13.5px;
+}
+
+.plot-activ-ligne strong {
+  font-family: "Fraunces", serif;
+  font-weight: 600;
+}
+
+.plot-activ-livre {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 15.5px;
+}
+
+.plot-activ-bas {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 2px;
+  gap: 8px;
+}
+
+.plot-activ-temps {
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  color: var(--plot-muted);
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.plot-activ-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.plot-coeur {
+  background: none;
+  border: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--plot-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  padding: 2px 4px;
+}
+
+.plot-coeur.actif {
+  color: var(--plot-accent);
+}
+
+.plot-commenter {
+  background: none;
+  border: none;
+  color: var(--plot-muted);
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  padding: 2px 0;
+}
+
+.plot-commenter:hover {
+  color: var(--plot-ink);
+}
+
+.plot-commentaires {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px dashed var(--plot-line);
+}
+
+.plot-commentaire {
+  font-size: 12.5px;
+  margin: 0 0 8px;
+  color: var(--plot-muted-2);
+}
+
+.plot-msg-qui {
+  font-family: "Inter", sans-serif;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--plot-ink);
+}
+
+.plot-moment-citation {
+  font-family: "Fraunces", serif;
+  font-style: italic;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--plot-ink);
+}
+
+@media (max-width: 420px) {
+  .plot-cloche-dropdown {
+    width: 280px;
+  }
 }

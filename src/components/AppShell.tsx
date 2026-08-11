@@ -7,6 +7,7 @@ import { normaliserPseudo, pseudoValide, PSEUDO_AIDE } from "@/lib/pseudo";
 import { PlotMark } from "@/components/PlotMark";
 import { Avatar } from "@/components/Avatar";
 import { EtageresListe } from "@/components/EtageresListe";
+import { NotificationBell } from "@/components/NotificationBell";
 import type { DonneesAjoutManuel, LivreEtagere } from "@/lib/shelf";
 import type { ResultatRecherche } from "@/lib/googleBooks";
 import { televerserCouverture } from "@/lib/storage";
@@ -17,7 +18,7 @@ export type Profil = {
   bio: string;
 };
 
-type Onglet = "activite" | "etageres" | "salons";
+type Onglet = "etageres" | "salons";
 
 export function AppShell({
   profil: profilInitial,
@@ -170,14 +171,30 @@ export function AppShell({
       setEnCours((l) => l.filter((i) => i.id !== id));
       setEnvie((l) => [item, ...l]);
       setErreurEtagere("Impossible de commencer ce livre, réessaie.");
+      return;
     }
+
+    await supabase.from("activity_feed").insert({
+      user_id: profil.id,
+      type: "commence",
+      contenu: { titre: item.livre.titre, bookId: item.livre.id },
+    });
   }
 
   async function ajouterMoment(id: string, texte: string) {
+    const item = enCours.find((i) => i.id === id);
     setEnCours((l) =>
       l.map((i) => (i.id === id ? { ...i, dernierMoment: texte } : i))
     );
     await supabase.from("user_books").update({ dernier_moment: texte }).eq("id", id);
+
+    if (item) {
+      await supabase.from("activity_feed").insert({
+        user_id: profil.id,
+        type: "moment",
+        contenu: { titre: item.livre.titre, bookId: item.livre.id, texte },
+      });
+    }
   }
 
   async function terminerLecture(id: string, note: number) {
@@ -196,21 +213,23 @@ export function AppShell({
       setLu((l) => l.filter((i) => i.id !== id));
       setEnCours((l) => [item, ...l]);
       setErreurEtagere("Impossible de terminer ce livre, réessaie.");
+      return;
     }
+
+    await supabase.from("activity_feed").insert({
+      user_id: profil.id,
+      type: "termine",
+      contenu: { titre: item.livre.titre, bookId: item.livre.id, note },
+    });
   }
 
   return (
     <div>
       <header className="plot-header">
         <div className="plot-header-inner">
+          <NotificationBell profilId={profil.id} pseudo={profil.pseudo} />
           <PlotMark />
           <nav className="plot-nav">
-            <button
-              className={onglet === "activite" ? "plot-nav-btn active" : "plot-nav-btn"}
-              onClick={() => setOnglet("activite")}
-            >
-              Activité
-            </button>
             <button
               className={onglet === "etageres" ? "plot-nav-btn active" : "plot-nav-btn"}
               onClick={() => setOnglet("etageres")}
@@ -258,13 +277,6 @@ export function AppShell({
               onAjouterManuel={ajouterManuel}
             />
           </section>
-        )}
-        {onglet === "activite" && (
-          <p className="plot-chargement">
-            Le fil d&apos;activité arrive à la Phase 3 — la cloche de
-            notification et l&apos;historique des Plot Moments sont pour
-            bientôt.
-          </p>
         )}
         {onglet === "salons" && (
           <p className="plot-chargement">
