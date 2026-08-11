@@ -32,7 +32,9 @@ réactions (cœur) et commentaires sur chaque entrée, nouvelles entrées
 poussées en direct (Supabase Realtime) chez toutes les utilisatrices
 connectées.
 
-🚧 À venir : Book Clubs, abonnements et confidentialité (Phase 4).
+🏗️ **Phase 4 en cours** : modèle de données livré (Book Clubs, abonnements
+avec demande/acceptation, confidentialité) — [`0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql),
+UI à venir juste après.
 
 ## 1. Installer et lancer en local
 
@@ -63,7 +65,8 @@ sur ton projet**, il faut le faire manuellement une fois :
    - [`supabase/migrations/0001_profiles.sql`](./supabase/migrations/0001_profiles.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(déjà fait ✅)*
-   - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(nouveau — Phase 3)*
+   - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql) *(nouveau — Phase 4, modèle de données)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -102,12 +105,29 @@ sur ton projet**, il faut le faire manuellement une fois :
 - l'ajout de `activity_feed` à la publication `supabase_realtime`, pour que
   les nouvelles entrées arrivent en direct dans l'app.
 
-Les quatre scripts sont idempotents : tu peux les rejouer sans risque.
+`0005_clubs_follows.sql` crée :
+- `follows` (abonnements) : `statut` `en_attente` / `accepte` — une demande
+  doit être acceptée par la personne visée avant de compter comme
+  abonnement, RLS limitant chacune à ne voir que les lignes où elle est
+  impliquée ;
+- `clubs`, `club_members` (`statut` `invite` / `accepte`) et
+  `club_messages` : un club privé n'est visible que par ses membres
+  acceptés, un club public par toutes ; rejoindre un club passe par
+  invitation + acceptation (public ou privé) ; la créatrice d'un club y est
+  ajoutée automatiquement comme membre acceptée (trigger
+  `on_club_created`) ;
+- la fonction `est_membre_accepte()` (security definer), qui évite la
+  récursion RLS quand une policy doit vérifier l'appartenance à un club ;
+- élargit la contrainte de type de `activity_feed` pour accepter `message`
+  (messages de club publiés dans le fil) ;
+- ajoute `club_messages` à la publication `supabase_realtime`.
+
+Les cinq scripts sont idempotents : tu peux les rejouer sans risque.
 
 ⚠️ Si Realtime est explicitement désactivé sur ton projet (Database →
-Replication), active-le pour la table `activity_feed` — la cloche
-fonctionnera quand même sans, simplement sans mise à jour en direct (il
-faudra rouvrir le panneau pour voir les nouvelles entrées).
+Replication), active-le pour `activity_feed` et `club_messages` — la cloche
+et la messagerie fonctionneront quand même sans, simplement sans mise à
+jour en direct.
 
 ## 3. Configurer Supabase Auth (dashboard)
 
@@ -177,7 +197,35 @@ supabase/migrations/
   0002_books.sql                                               catalogue de livres & étagères (Phase 2)
   0003_storage_couvertures.sql                                bucket + policies pour les photos de couverture
   0004_activity_feed.sql                                      fil d'activité, réactions, commentaires, Realtime (Phase 3)
+  0005_clubs_follows.sql                                      Book Clubs, abonnements, confidentialité (Phase 4, modèle de données)
 ```
+
+## Notes de conception — Phase 4 (modèle de données)
+
+- **Abonnements avec demande/acceptation** : le cahier des charges liste
+  « on suit qui on veut par pseudo, pas nécessairement réciproque » parmi
+  les fonctionnalités validées du prototype, mais la section « ce qu'il
+  manque pour une vraie version pro » demande explicitement des
+  « demandes d'ami / abonnement avec acceptation, au lieu d'un ajout à sens
+  unique sans notification ». J'ai suivi cette seconde exigence — plus
+  précise sur le comportement cible — plutôt que l'ajout instantané du
+  prototype : `follows.statut` passe de `en_attente` à `accepte` seulement
+  quand la personne visée valide.
+- **Clubs privés ET publics passent par invitation/acceptation** : le
+  cahier ne demande l'invitation/acceptation explicitement que pour les
+  clubs *privés* ; je l'ai étendue par cohérence à l'ajout de membres en
+  général (`club_members.statut`), plutôt que d'avoir deux comportements
+  différents selon `clubs.prive`. Le champ `prive` contrôle uniquement la
+  *visibilité* du club (public = visible par toutes, privé = visible par
+  ses membres acceptés uniquement).
+- **`est_membre_accepte()` en security definer** : une policy RLS sur
+  `club_members` qui doit vérifier l'appartenance à un club ne peut pas
+  interroger `club_members` elle-même sans provoquer une récursion — la
+  fonction contourne ça (même mécanisme que `handle_new_user` en Phase 1).
+- **UI pas encore branchée** : cette migration pose uniquement le schéma et
+  les policies, à la demande explicite (« modèle de données d'abord »). Les
+  écrans (créer/rejoindre un club, messagerie, gérer ses abonnements, onglet
+  « Qui me suit ») arrivent dans la foulée, une fois la migration validée.
 
 ## Notes de conception — Phase 3
 
