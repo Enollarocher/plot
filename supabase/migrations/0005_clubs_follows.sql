@@ -4,74 +4,55 @@
 -- À exécuter dans Supabase Dashboard → SQL Editor, après 0004. Idempotent :
 -- peut être rejoué sans casser une base déjà migrée.
 --
--- Deux écarts volontaires par rapport au prototype, alignés sur la section
--- 4 du cahier des charges (« ce qu'il manque pour une vraie version pro ») :
---   1. Abonnements : demande + acceptation, au lieu d'un ajout à sens
---      unique et silencieux.
---   2. Clubs privés : visibilité restreinte aux membres invités ET
---      acceptés — étendu par cohérence à l'ajout de membres en général
---      (public ou privé), qui passe désormais par invitation + acceptation
---      plutôt qu'un ajout direct par pseudo.
+-- Règles confirmées :
+--   1. Abonnements : ajout instantané à sens unique (façon Strava/Instagram),
+--      pas de demande à accepter — comportement du prototype.
+--   2. Clubs publics : on rejoint en un clic. Clubs privés : invitation par
+--      un membre déjà accepté, puis acceptation par l'invitée.
 
--- 1. Abonnements (demande + acceptation) -------------------------------------
+-- 1. Abonnements (instantanés, à sens unique) ---------------------------------
 create table if not exists public.follows (
   follower_id uuid not null references public.profiles (id) on delete cascade,
   suivi_id uuid not null references public.profiles (id) on delete cascade,
-  statut text not null default 'en_attente',
   created_at timestamptz not null default now(),
-  updated_at timestamptz not null default now(),
   primary key (follower_id, suivi_id)
 );
 
 comment on table public.follows is
-  'Abonnement entre utilisatrices : follower_id demande à suivre suivi_id, statut passe à accepte quand suivi_id valide.';
+  'Abonnement entre utilisatrices : follower_id suit suivi_id, effectif immédiatement (pas de demande/acceptation).';
 
 do $$
 begin
   if not exists (select 1 from pg_constraint where conname = 'follows_pas_soi_meme') then
     alter table public.follows add constraint follows_pas_soi_meme check (follower_id <> suivi_id);
   end if;
-  if not exists (select 1 from pg_constraint where conname = 'follows_statut_valide') then
-    alter table public.follows add constraint follows_statut_valide check (statut in ('en_attente', 'accepte'));
-  end if;
 end $$;
 
 alter table public.follows enable row level security;
 
-drop trigger if exists follows_set_updated_at on public.follows;
-create trigger follows_set_updated_at
-  before update on public.follows
-  for each row execute function public.set_updated_at();
-
--- Chacune ne voit que les lignes où elle est impliquée (abonnée ou suivie) :
--- pas de visibilité du graphe social entier entre inconnues.
-drop policy if exists "Voir mes abonnements et mes abonnées" on public.follows;
-create policy "Voir mes abonnements et mes abonnées"
+-- Le réseau (qui suit qui) est visible par toute utilisatrice connectée —
+-- comme sur Strava/Instagram, y compris pour retrouver "Qui me suit".
+drop policy if exists "Le réseau d'abonnements est visible par les connectées" on public.follows;
+create policy "Le réseau d'abonnements est visible par les connectées"
   on public.follows for select
   to authenticated
-  using (auth.uid() = follower_id or auth.uid() = suivi_id);
+  using (true);
 
-drop policy if exists "Envoyer une demande d'abonnement en son nom" on public.follows;
-create policy "Envoyer une demande d'abonnement en son nom"
+drop policy if exists "Suivre quelqu'un en son nom" on public.follows;
+create policy "Suivre quelqu'un en son nom"
   on public.follows for insert
   to authenticated
-  with check (auth.uid() = follower_id and statut = 'en_attente');
+  with check (auth.uid() = follower_id);
 
-drop policy if exists "Accepter une demande reçue" on public.follows;
-create policy "Accepter une demande reçue"
-  on public.follows for update
-  to authenticated
-  using (auth.uid() = suivi_id)
-  with check (auth.uid() = suivi_id and statut = 'accepte');
-
-drop policy if exists "Annuler, refuser ou se désabonner" on public.follows;
-create policy "Annuler, refuser ou se désabonner"
+-- Se désabonner, ou retirer une abonnée de sa propre liste de suiveuses.
+drop policy if exists "Se désabonner ou retirer une abonnée" on public.follows;
+create policy "Se désabonner ou retirer une abonnée"
   on public.follows for delete
   to authenticated
   using (auth.uid() = follower_id or auth.uid() = suivi_id);
 
-create index if not exists follows_suivi_id_statut_idx on public.follows (suivi_id, statut);
-create index if not exists follows_follower_id_statut_idx on public.follows (follower_id, statut);
+create index if not exists follows_suivi_id_idx on public.follows (suivi_id);
+create index if not exists follows_follower_id_idx on public.follows (follower_id);
 
 -- 2. Book Clubs ---------------------------------------------------------------
 create table if not exists public.clubs (
@@ -91,7 +72,10 @@ begin
   end if;
 end $$;
 
--- 3. Membres de club (invitation + acceptation) --------------------------------
+-- 3. Membres de club -----------------------------------------------------------
+-- Club public : on rejoint directement (statut accepte dès l'insertion).
+-- Club privé : un membre déjà accepté invite par pseudo (statut invite),
+-- puis l'invitée doit accepter elle-même.
 create table if not exists public.club_members (
   club_id uuid not null references public.clubs (id) on delete cascade,
   user_id uuid not null references public.profiles (id) on delete cascade,
@@ -128,8 +112,8 @@ as $$
 $$;
 
 -- Ajoute automatiquement la créatrice d'un club comme membre accepté
--- (impossible de passer par la policy d'insertion normale : elle exige déjà
--- d'être membre accepté du club, ce qui n'existe pas encore à la création).
+-- (impossible de passer par une policy d'insertion normale : elles exigent
+-- déjà d'être membre du club, ce qui n'existe pas encore à la création).
 create or replace function public.handle_new_club()
 returns trigger
 language plpgsql
@@ -187,12 +171,24 @@ create policy "Voir sa ligne ou le roster d'un club dont on est membre"
   to authenticated
   using (auth.uid() = user_id or public.est_membre_accepte(club_id, auth.uid()));
 
--- Un membre accepté peut inviter quelqu'un d'autre (jamais s'auto-accepter).
-drop policy if exists "Un membre accepté invite par pseudo" on public.club_members;
-create policy "Un membre accepté invite par pseudo"
+-- Insertion : soit on rejoint soi-même un club PUBLIC (statut accepte
+-- immédiat), soit un membre déjà accepté invite quelqu'un (statut invite,
+-- pour un club public ou privé).
+drop policy if exists "Rejoindre un club public, ou être invitée par un membre" on public.club_members;
+create policy "Rejoindre un club public, ou être invitée par un membre"
   on public.club_members for insert
   to authenticated
-  with check (statut = 'invite' and public.est_membre_accepte(club_id, auth.uid()));
+  with check (
+    (
+      auth.uid() = user_id
+      and statut = 'accepte'
+      and exists (select 1 from public.clubs c where c.id = club_id and c.prive = false)
+    )
+    or (
+      statut = 'invite'
+      and public.est_membre_accepte(club_id, auth.uid())
+    )
+  );
 
 -- Seule l'invitée peut accepter sa propre invitation (et uniquement passer
 -- de invité à accepté — `role` reste inchangé, pas d'auto-promotion possible).

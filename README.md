@@ -106,14 +106,15 @@ sur ton projet**, il faut le faire manuellement une fois :
   les nouvelles entrées arrivent en direct dans l'app.
 
 `0005_clubs_follows.sql` crée :
-- `follows` (abonnements) : `statut` `en_attente` / `accepte` — une demande
-  doit être acceptée par la personne visée avant de compter comme
-  abonnement, RLS limitant chacune à ne voir que les lignes où elle est
-  impliquée ;
+- `follows` (abonnements) : ajout instantané à sens unique, façon
+  Strava/Instagram, comme le prototype — pas de demande à accepter. Le
+  réseau (qui suit qui) est visible par toute utilisatrice connectée, pour
+  permettre l'onglet « Qui me suit » ;
 - `clubs`, `club_members` (`statut` `invite` / `accepte`) et
   `club_messages` : un club privé n'est visible que par ses membres
-  acceptés, un club public par toutes ; rejoindre un club passe par
-  invitation + acceptation (public ou privé) ; la créatrice d'un club y est
+  acceptés, un club public par toutes ; on **rejoint un club public en un
+  clic**, un **club privé nécessite une invitation** par un membre déjà
+  accepté puis acceptation par l'invitée ; la créatrice d'un club y est
   ajoutée automatiquement comme membre acceptée (trigger
   `on_club_created`) ;
 - la fonction `est_membre_accepte()` (security definer), qui évite la
@@ -202,22 +203,21 @@ supabase/migrations/
 
 ## Notes de conception — Phase 4 (modèle de données)
 
-- **Abonnements avec demande/acceptation** : le cahier des charges liste
-  « on suit qui on veut par pseudo, pas nécessairement réciproque » parmi
-  les fonctionnalités validées du prototype, mais la section « ce qu'il
-  manque pour une vraie version pro » demande explicitement des
-  « demandes d'ami / abonnement avec acceptation, au lieu d'un ajout à sens
-  unique sans notification ». J'ai suivi cette seconde exigence — plus
-  précise sur le comportement cible — plutôt que l'ajout instantané du
-  prototype : `follows.statut` passe de `en_attente` à `accepte` seulement
-  quand la personne visée valide.
-- **Clubs privés ET publics passent par invitation/acceptation** : le
-  cahier ne demande l'invitation/acceptation explicitement que pour les
-  clubs *privés* ; je l'ai étendue par cohérence à l'ajout de membres en
-  général (`club_members.statut`), plutôt que d'avoir deux comportements
-  différents selon `clubs.prive`. Le champ `prive` contrôle uniquement la
-  *visibilité* du club (public = visible par toutes, privé = visible par
-  ses membres acceptés uniquement).
+Règles confirmées après clarification :
+
+- **Abonnements instantanés, à sens unique** : `follows` n'a pas de
+  `statut` — un `insert` vaut abonnement immédiat, comme le prototype
+  (façon Strava/Instagram). Le réseau est visible par toute utilisatrice
+  connectée (RLS `using (true)` en lecture), pour permettre l'onglet
+  « Qui me suit » et d'éventuelles suggestions plus tard.
+- **Clubs publics = un clic, clubs privés = invitation** : la policy
+  d'insertion sur `club_members` autorise soit une utilisatrice à
+  s'ajouter elle-même directement si `clubs.prive = false` (statut
+  `accepte` immédiat), soit un membre déjà accepté à inviter quelqu'un
+  (statut `invite`, pour un club public ou privé) — seule l'invitée peut
+  ensuite passer sa ligne à `accepte`. Un club privé n'apparaît donc que
+  pour ses membres accepté·es (policy de lecture sur `clubs`), et ne peut
+  être rejoint que via ce chemin d'invitation.
 - **`est_membre_accepte()` en security definer** : une policy RLS sur
   `club_members` qui doit vérifier l'appartenance à un club ne peut pas
   interroger `club_members` elle-même sans provoquer une récursion — la
