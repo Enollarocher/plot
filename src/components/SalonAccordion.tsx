@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { normaliserPseudo } from "@/lib/pseudo";
 import {
+  LIBELLE_ROLE,
   versMembre,
   versMessage,
   type Club,
@@ -12,6 +13,7 @@ import {
   type LigneMessageBrute,
   type MembreClub,
   type MessageClub,
+  type RoleMembre,
 } from "@/lib/clubs";
 
 export function SalonAccordion({
@@ -51,6 +53,8 @@ export function SalonAccordion({
   const estMembre = monMembre?.statut === "accepte";
   const estInvitee = monMembre?.statut === "invite";
   const peutRejoindre = !monMembre && !club.prive;
+  const estAdmin = estMembre && monMembre?.role === "administrateur";
+  const peutPublier = estMembre && monMembre?.role !== "observateur";
 
   useEffect(() => {
     if (!ouvert || !estMembre || charge) return;
@@ -108,7 +112,7 @@ export function SalonAccordion({
 
   async function envoyer() {
     const texte = brouillon.trim();
-    if (!texte) return;
+    if (!texte || !peutPublier) return;
     setBrouillon("");
 
     const { error } = await supabase
@@ -153,7 +157,7 @@ export function SalonAccordion({
 
     const { error } = await supabase
       .from("club_members")
-      .insert({ club_id: club.id, user_id: cible.id, statut: "invite" });
+      .insert({ club_id: club.id, user_id: cible.id, statut: "invite", role: "membre" });
 
     setEnCours(false);
 
@@ -177,7 +181,7 @@ export function SalonAccordion({
     setEnCours(true);
     const { error } = await supabase
       .from("club_members")
-      .insert({ club_id: club.id, user_id: profilId, statut: "accepte" });
+      .insert({ club_id: club.id, user_id: profilId, statut: "accepte", role: "membre" });
     setEnCours(false);
     if (error) {
       setErreur("Impossible de rejoindre ce club, réessaie.");
@@ -197,6 +201,30 @@ export function SalonAccordion({
     setEnCours(false);
     if (error) return;
     onMembreMisAJour({ clubId: club.id, userId: profilId, pseudo, role: monMembre?.role ?? "membre", statut: "accepte" });
+  }
+
+  async function changerRole(userId: string, role: RoleMembre) {
+    setMembres((m) => m.map((mb) => (mb.userId === userId ? { ...mb, role } : mb)));
+    const { error } = await supabase
+      .from("club_members")
+      .update({ role })
+      .eq("club_id", club.id)
+      .eq("user_id", userId);
+    if (error) setErreur("Impossible de modifier ce rôle.");
+  }
+
+  async function retirerMembre(userId: string) {
+    const avant = membres;
+    setMembres((m) => m.filter((mb) => mb.userId !== userId));
+    const { error } = await supabase
+      .from("club_members")
+      .delete()
+      .eq("club_id", club.id)
+      .eq("user_id", userId);
+    if (error) {
+      setMembres(avant);
+      setErreur("Impossible de retirer cette personne.");
+    }
   }
 
   const membresAcceptes = membres.filter((m) => m.statut === "accepte");
@@ -253,18 +281,22 @@ export function SalonAccordion({
           ))}
           {charge && messages.length === 0 && <p className="plot-par">Aucun message pour l&apos;instant.</p>}
 
-          <div className="plot-msg-form">
-            <input
-              className="plot-input"
-              placeholder="Écrire un mot au salon..."
-              value={brouillon}
-              onChange={(e) => setBrouillon(e.target.value)}
-              onKeyDown={(e) => e.key === "Enter" && envoyer()}
-            />
-            <button className="plot-btn" onClick={envoyer}>
-              Envoyer
-            </button>
-          </div>
+          {peutPublier ? (
+            <div className="plot-msg-form">
+              <input
+                className="plot-input"
+                placeholder="Écrire un mot au salon..."
+                value={brouillon}
+                onChange={(e) => setBrouillon(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && envoyer()}
+              />
+              <button className="plot-btn" onClick={envoyer}>
+                Envoyer
+              </button>
+            </div>
+          ) : (
+            <p className="plot-par">Tu es en lecture seule dans ce club.</p>
+          )}
 
           <div className="plot-membres-gestion">
             <p className="plot-membres-titre">Membres</p>
@@ -272,6 +304,7 @@ export function SalonAccordion({
               {membresAcceptes.map((m) => (
                 <span key={m.userId} className="plot-chip">
                   <Avatar pseudo={m.pseudo} size={20} /> {m.pseudo}
+                  {m.role !== "membre" && <span className="plot-role-tag">{LIBELLE_ROLE[m.role]}</span>}
                 </span>
               ))}
               {membresInvites.map((m) => (
@@ -281,30 +314,65 @@ export function SalonAccordion({
               ))}
             </div>
 
-            {amisAAjouter.length > 0 && (
-              <div className="plot-membres-suggestions">
-                {amisAAjouter.map((a) => (
-                  <button key={a.id} className="plot-chip plot-chip-ajout" onClick={() => inviterPseudo(a.pseudo)}>
-                    + {a.pseudo}
-                  </button>
-                ))}
-              </div>
-            )}
-
             {erreur && <p className="plot-panneau-erreur">{erreur}</p>}
 
-            <div className="plot-msg-form">
-              <input
-                className="plot-input"
-                placeholder="Inviter par pseudo..."
-                value={pseudoInvite}
-                onChange={(e) => setPseudoInvite(e.target.value)}
-                onKeyDown={(e) => e.key === "Enter" && inviter()}
-              />
-              <button className="plot-btn-mini" onClick={inviter} disabled={enCours}>
-                Inviter
-              </button>
-            </div>
+            {estAdmin && (
+              <>
+                {amisAAjouter.length > 0 && (
+                  <div className="plot-membres-suggestions">
+                    {amisAAjouter.map((a) => (
+                      <button key={a.id} className="plot-chip plot-chip-ajout" onClick={() => inviterPseudo(a.pseudo)}>
+                        + {a.pseudo}
+                      </button>
+                    ))}
+                  </div>
+                )}
+
+                <div className="plot-msg-form">
+                  <input
+                    className="plot-input"
+                    placeholder="Inviter par pseudo..."
+                    value={pseudoInvite}
+                    onChange={(e) => setPseudoInvite(e.target.value)}
+                    onKeyDown={(e) => e.key === "Enter" && inviter()}
+                  />
+                  <button className="plot-btn-mini" onClick={inviter} disabled={enCours}>
+                    Inviter
+                  </button>
+                </div>
+
+                {membresAcceptes.filter((m) => m.userId !== profilId).length > 0 && (
+                  <div className="plot-gestion-membres">
+                    <p className="plot-membres-titre plot-membres-titre-espace">Gérer les rôles</p>
+                    {membresAcceptes
+                      .filter((m) => m.userId !== profilId)
+                      .map((m) => (
+                        <div key={m.userId} className="plot-gestion-ligne">
+                          <span className="plot-gestion-nom">
+                            <Avatar pseudo={m.pseudo} size={18} /> {m.pseudo}
+                          </span>
+                          <select
+                            className="plot-role-select"
+                            value={m.role}
+                            onChange={(e) => changerRole(m.userId, e.target.value as RoleMembre)}
+                          >
+                            <option value="administrateur">Administratrice</option>
+                            <option value="membre">Membre</option>
+                            <option value="observateur">Observatrice</option>
+                          </select>
+                          <button
+                            className="plot-chip-retirer"
+                            onClick={() => retirerMembre(m.userId)}
+                            aria-label={`Retirer ${m.pseudo}`}
+                          >
+                            Retirer
+                          </button>
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </>
+            )}
           </div>
         </div>
       )}

@@ -128,7 +128,7 @@ export function SalonsListe({
     setClubs((l) => [club!, ...l]);
     setMesMembres((m) => ({
       ...m,
-      [club!.id]: { clubId: club!.id, userId: profilId, pseudo, role: "createur", statut: "accepte" },
+      [club!.id]: { clubId: club!.id, userId: profilId, pseudo, role: "administrateur", statut: "accepte" },
     }));
     setPanneauCreation(false);
     setNomClub("");

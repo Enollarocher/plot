@@ -13,6 +13,7 @@ export type DonneesAjoutManuel = {
   auteur: string;
   pages: number | null;
   resume: string;
+  isbn: string | null;
   couverture: File | null;
 };
 

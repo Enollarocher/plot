@@ -1,5 +1,11 @@
 export type StatutMembre = "invite" | "accepte";
-export type RoleMembre = "createur" | "membre";
+export type RoleMembre = "administrateur" | "membre" | "observateur";
+
+export const LIBELLE_ROLE: Record<RoleMembre, string> = {
+  administrateur: "Administratrice",
+  membre: "Membre",
+  observateur: "Observatrice",
+};
 
 export type Club = {
   id: string;

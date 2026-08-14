@@ -39,6 +39,16 @@ avec suggestions issues des abonnements ; abonnements instantanés à sens
 unique avec onglet « Qui me suit » ; les messages des clubs publics
 apparaissent dans le fil d'activité (clic dessus → ouvre le salon), ceux
 des clubs privés restent confinés au club.
+✅ **Rôles de club façon WhatsApp** : administratrices (gèrent les membres et
+les rôles, modifient le club), membres (publient des messages) et
+observatrices (lecture seule).
+✅ **Recherche par auteur avec pagination** : bibliographie complète d'une
+autrice ou d'un auteur (`inauthor:`), avec « Voir plus » plutôt qu'un
+mélange de quelques résultats.
+✅ **Scan de code-barres** pour l'ISBN dans l'ajout manuel (API
+`BarcodeDetector`), avec repli automatique et invisible sur la saisie
+manuelle quand le navigateur ne le prend pas en charge (Safari/iOS
+notamment).
 
 ## 1. Installer et lancer en local
 
@@ -71,6 +81,7 @@ sur ton projet**, il faut le faire manuellement une fois :
    - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0006_club_roles.sql`](./supabase/migrations/0006_club_roles.sql) *(nouveau)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -127,7 +138,17 @@ sur ton projet**, il faut le faire manuellement une fois :
   (messages de club publiés dans le fil) ;
 - ajoute `club_messages` à la publication `supabase_realtime`.
 
-Les cinq scripts sont idempotents : tu peux les rejouer sans risque.
+`0006_club_roles.sql` crée :
+- trois rôles pour `club_members.role` : `administrateur` / `membre` /
+  `observateur` (remplace l'ancien `createur`, migré automatiquement) ;
+- les fonctions `est_administratrice()` et `peut_publier()` (security
+  definer) ;
+- les administratrices peuvent modifier le club, inviter, changer le rôle
+  d'un membre déjà accepté et retirer quelqu'un ; les observatrices ne
+  peuvent pas publier de message (`club_messages` policy d'insertion mise
+  à jour).
+
+Les six scripts sont idempotents : tu peux les rejouer sans risque.
 
 ⚠️ Si Realtime est explicitement désactivé sur ton projet (Database →
 Replication), active-le pour `activity_feed` et `club_messages` — la cloche
@@ -190,8 +211,9 @@ src/
     EtageresListe.tsx, AjouterLivrePanel.tsx                 sous-onglets, recherche/ajout manuel
     BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu, en cours)
     NotificationBell.tsx, ActivEntry.tsx                      cloche + panneau déroulant du fil d'activité
-    SalonsListe.tsx, SalonAccordion.tsx                       liste des clubs, création, accordéon (messages/membres)
+    SalonsListe.tsx, SalonAccordion.tsx                       liste des clubs, création, accordéon (messages/membres/rôles)
     AbonnementsSection.tsx                                    suivre par pseudo, mes abonnements, qui me suit
+    BarcodeScanner.tsx                                        scan ISBN (BarcodeDetector), avec repli manuel
     icons/Etoile.tsx, icons/CodeBarres.tsx,                   pictogrammes dessinés à la main (SVG)
     icons/Cloche.tsx, icons/Coeur.tsx
     PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
@@ -206,7 +228,32 @@ supabase/migrations/
   0003_storage_couvertures.sql                                bucket + policies pour les photos de couverture
   0004_activity_feed.sql                                      fil d'activité, réactions, commentaires, Realtime (Phase 3)
   0005_clubs_follows.sql                                      Book Clubs, abonnements, confidentialité (Phase 4)
+  0006_club_roles.sql                                         rôles administratrice / membre / observateur
 ```
+
+## Notes de conception — après la Phase 4
+
+- **Recherche par auteur** : `lib/googleBooks.ts` a un `rechercherParAuteur()`
+  dédié, qui construit `q=inauthor:"<nom>"` (guillemets pour éviter que
+  Google Books ne découpe le nom en mots-clés indépendants) et pagine via
+  `startIndex`/`totalItems`. Distinct de la recherche rapide (`q=` libre,
+  8 résultats) pour ne pas changer son comportement existant — un onglet
+  « Parcourir un auteur » bascule entre les deux dans le panneau d'ajout.
+- **Scan de code-barres** : `BarcodeDetector` n'a pas de types officiels
+  dans `lib.dom.d.ts` et n'existe pas côté serveur ; `BarcodeScanner.tsx`
+  le détecte via `'BarcodeDetector' in window` dans un `useEffect` (jamais
+  au premier rendu, pour ne pas désaccorder l'hydratation) et n'affiche le
+  bouton « Scanner » que si c'est vrai — sur Safari/iOS (non supporté), le
+  bouton n'apparaît simplement pas et le champ ISBN reste saisissable à la
+  main, sans aucun état d'erreur ni blocage.
+- **Rôles de club** : trois rôles (`administrateur`/`membre`/`observateur`)
+  au lieu du `createur` binaire de la Phase 4 initiale. Seules les
+  administratrices invitent, changent les rôles et retirent des membres ;
+  les observatrices ont un accès lecture seule (`club_messages` refuse
+  leurs insertions au niveau RLS, pas seulement dans l'UI). Rejoindre
+  soi-même un club public donne toujours le rôle `membre` — jamais
+  `administrateur` — appliqué au niveau de la policy, pas seulement côté
+  client.
 
 ## Notes de conception — Phase 4
 

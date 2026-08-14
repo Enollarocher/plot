@@ -155,6 +155,7 @@ export function AppShell({
         auteur: donnees.auteur,
         pages: donnees.pages,
         resume: donnees.resume || null,
+        isbn: donnees.isbn || null,
         couverture_url: couvertureUrl,
       })
       .select("id, titre, auteur, couverture_url, pages")

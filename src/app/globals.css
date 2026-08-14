@@ -1135,3 +1135,88 @@ textarea.plot-input {
   font-size: 12.5px;
   color: var(--plot-muted-2);
 }
+
+/* Rôles de club ------------------------------------------------------------ */
+
+.plot-role-tag {
+  font-family: "Inter", sans-serif;
+  font-size: 9.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--plot-blue);
+  border: 1px solid var(--plot-blue);
+  border-radius: 20px;
+  padding: 1px 6px;
+  margin-left: 2px;
+}
+
+.plot-gestion-membres {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--plot-line);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.plot-gestion-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.plot-gestion-nom {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-role-select {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  border: 1px solid var(--plot-line);
+  border-radius: 20px;
+  padding: 3px 6px;
+  background: var(--plot-bg);
+  color: var(--plot-ink);
+}
+
+/* Recherche par auteur & scan de code-barres ------------------------------- */
+
+.plot-mode-toggle {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.plot-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px dashed var(--plot-line);
+}
+
+.plot-scanner {
+  margin: 10px 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.plot-scanner-video {
+  width: 100%;
+  max-width: 320px;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  border-radius: 8px;
+  border: 1px solid var(--plot-line);
+  background: #000;
+}
