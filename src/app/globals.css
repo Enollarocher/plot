@@ -852,6 +852,13 @@ textarea.plot-input {
   font-size: 13.5px;
 }
 
+.plot-activ-clic {
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .plot-activ-ligne strong {
   font-family: "Fraunces", serif;
   font-weight: 600;
@@ -951,4 +958,180 @@ textarea.plot-input {
   .plot-cloche-dropdown {
     width: 280px;
   }
+}
+
+/* Book Clubs (salons) & abonnements --------------------------------------- */
+
+.plot-btn-creer {
+  display: block;
+  margin-bottom: 18px;
+}
+
+.plot-salon {
+  border-bottom: 1px solid var(--plot-line);
+}
+
+.plot-salon-head {
+  width: 100%;
+  background: none;
+  border: none;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 2px;
+  text-align: left;
+}
+
+.plot-code {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  color: var(--plot-blue);
+  border: 1px solid var(--plot-blue);
+  border-radius: 3px;
+  padding: 2px 5px;
+  flex-shrink: 0;
+}
+
+.plot-salon-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.plot-salon-genre {
+  font-family: "Fraunces", serif;
+  font-size: 15px;
+  display: block;
+}
+
+.plot-salon-prive {
+  font-family: "Inter", sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--plot-muted);
+}
+
+.plot-lecture-en-cours {
+  font-family: "Inter", sans-serif;
+  font-size: 11px;
+  color: var(--plot-muted);
+}
+
+.plot-salon-membres {
+  display: flex;
+}
+
+.plot-salon-membres .plot-avatar {
+  margin-left: -8px;
+  border: 2px solid var(--plot-bg);
+}
+
+.plot-chevron {
+  font-size: 20px;
+  color: var(--plot-muted);
+  transition: transform 0.15s ease;
+  flex-shrink: 0;
+}
+
+.plot-chevron.open {
+  transform: rotate(90deg);
+}
+
+.plot-salon-body {
+  padding: 4px 2px 18px 42px;
+}
+
+.plot-salon-rejoindre {
+  padding: 0 2px 18px 42px;
+}
+
+.plot-msg {
+  font-size: 13.5px;
+  margin: 0 0 8px;
+  color: var(--plot-muted-2);
+}
+
+.plot-amis {
+  margin-bottom: 22px;
+  padding-bottom: 18px;
+  border-bottom: 1px dashed var(--plot-line);
+}
+
+.plot-membres-titre {
+  font-family: "Inter", sans-serif;
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  color: var(--plot-muted);
+  margin: 0 0 8px;
+}
+
+.plot-membres-titre-espace {
+  margin-top: 16px;
+}
+
+.plot-membres-liste {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.plot-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: var(--plot-card-bg);
+  border: 1px solid var(--plot-line);
+  border-radius: 20px;
+  padding: 3px 8px 3px 3px;
+  font-family: "Inter", sans-serif;
+  font-size: 12px;
+}
+
+.plot-chip-invite {
+  opacity: 0.6;
+  font-style: italic;
+}
+
+.plot-chip-retirer {
+  background: none;
+  border: none;
+  color: var(--plot-muted);
+  font-size: 13px;
+  padding: 0 0 0 2px;
+}
+
+.plot-chip-retirer:hover {
+  color: var(--plot-accent);
+}
+
+.plot-chip-ajout {
+  border-style: dashed;
+  color: var(--plot-blue);
+  border-color: var(--plot-blue);
+  cursor: pointer;
+  background: none;
+}
+
+.plot-membres-gestion {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed var(--plot-line);
+}
+
+.plot-membres-suggestions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.plot-checkbox-ligne {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: "Inter", sans-serif;
+  font-size: 12.5px;
+  color: var(--plot-muted-2);
 }

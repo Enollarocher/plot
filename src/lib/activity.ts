@@ -1,4 +1,4 @@
-export type TypeActivite = "moment" | "termine" | "commence";
+export type TypeActivite = "moment" | "termine" | "commence" | "message";
 
 export type ContenuCommence = { titre: string; bookId?: string };
 export type ContenuMoment = { titre: string; texte: string; bookId?: string };
@@ -7,6 +7,12 @@ export type ContenuTermine = {
   note: number;
   heure: string;
   bookId?: string;
+};
+export type ContenuMessage = {
+  clubId: string;
+  code: string;
+  nom: string;
+  texte: string;
 };
 
 export type Commentaire = {
@@ -23,7 +29,7 @@ export type EntreeActivite = {
   userId: string;
   pseudo: string;
   createdAt: string;
-  contenu: ContenuCommence | ContenuMoment | ContenuTermine;
+  contenu: ContenuCommence | ContenuMoment | ContenuTermine | ContenuMessage;
   nbReactions: number;
   jaiReagi: boolean;
   commentaires: Commentaire[];
@@ -75,7 +81,11 @@ export function construireEntree(
     userId: ligne.user_id,
     pseudo: ligne.profil?.pseudo ?? "?",
     createdAt: ligne.created_at,
-    contenu: (ligne.contenu ?? {}) as ContenuCommence | ContenuMoment | ContenuTermine,
+    contenu: (ligne.contenu ?? {}) as
+      | ContenuCommence
+      | ContenuMoment
+      | ContenuTermine
+      | ContenuMessage,
     nbReactions: mesReactions.length,
     jaiReagi: mesReactions.some((r) => r.user_id === moiId),
     commentaires: mesCommentaires,

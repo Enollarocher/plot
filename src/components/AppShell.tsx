@@ -8,6 +8,8 @@ import { PlotMark } from "@/components/PlotMark";
 import { Avatar } from "@/components/Avatar";
 import { EtageresListe } from "@/components/EtageresListe";
 import { NotificationBell } from "@/components/NotificationBell";
+import { SalonsListe } from "@/components/SalonsListe";
+import { AbonnementsSection } from "@/components/AbonnementsSection";
 import type { DonneesAjoutManuel, LivreEtagere } from "@/lib/shelf";
 import type { ResultatRecherche } from "@/lib/googleBooks";
 import { televerserCouverture } from "@/lib/storage";
@@ -42,6 +44,19 @@ export function AppShell({
   );
   const [lu, setLu] = useState(etagereInitiale.filter((l) => l.statut === "lu"));
   const [erreurEtagere, setErreurEtagere] = useState("");
+
+  const [salonOuvert, setSalonOuvert] = useState<string | null>(null);
+  const [nbAbonnements, setNbAbonnements] = useState(0);
+  const [nbAbonnes, setNbAbonnes] = useState(0);
+
+  function ouvrirSalonDepuisActivite(clubId: string) {
+    setOnglet("salons");
+    setSalonOuvert(clubId);
+  }
+
+  function toggleSalon(clubId: string) {
+    setSalonOuvert((c) => (c === clubId ? null : clubId));
+  }
 
   async function seDeconnecter() {
     setDeconnexionEnCours(true);
@@ -232,7 +247,11 @@ export function AppShell({
     <div>
       <header className="plot-header">
         <div className="plot-header-inner">
-          <NotificationBell profilId={profil.id} pseudo={profil.pseudo} />
+          <NotificationBell
+            profilId={profil.id}
+            pseudo={profil.pseudo}
+            onOuvrirSalon={ouvrirSalonDepuisActivite}
+          />
           <PlotMark />
           <nav className="plot-nav">
             <button
@@ -269,6 +288,15 @@ export function AppShell({
               nbLu={lu.length}
               nbEnCours={enCours.length}
               nbEnvie={envie.length}
+              nbAbonnements={nbAbonnements}
+              nbAbonnes={nbAbonnes}
+            />
+            <AbonnementsSection
+              profilId={profil.id}
+              onCompteChange={(a, s) => {
+                setNbAbonnements(a);
+                setNbAbonnes(s);
+              }}
             />
             {erreurEtagere && <p className="plot-panneau-erreur">{erreurEtagere}</p>}
             <EtageresListe
@@ -284,9 +312,12 @@ export function AppShell({
           </section>
         )}
         {onglet === "salons" && (
-          <p className="plot-chargement">
-            Les Book Clubs arrivent à la Phase 4.
-          </p>
+          <SalonsListe
+            profilId={profil.id}
+            pseudo={profil.pseudo}
+            salonOuvert={salonOuvert}
+            onToggleSalon={toggleSalon}
+          />
         )}
       </div>
     </div>
@@ -299,12 +330,16 @@ function ProfilSection({
   nbLu,
   nbEnCours,
   nbEnvie,
+  nbAbonnements,
+  nbAbonnes,
 }: {
   profil: Profil;
   onProfilChange: (p: Profil) => void;
   nbLu: number;
   nbEnCours: number;
   nbEnvie: number;
+  nbAbonnements: number;
+  nbAbonnes: number;
 }) {
   const supabase = createClient();
 
@@ -442,11 +477,11 @@ function ProfilSection({
           <span className="plot-stat-l">Envie de lire</span>
         </div>
         <div>
-          <span className="plot-stat-n">0</span>
+          <span className="plot-stat-n">{nbAbonnements}</span>
           <span className="plot-stat-l">Abonnements</span>
         </div>
         <div>
-          <span className="plot-stat-n">0</span>
+          <span className="plot-stat-n">{nbAbonnes}</span>
           <span className="plot-stat-l">Abonnés</span>
         </div>
       </div>

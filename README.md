@@ -8,7 +8,7 @@ Le design system (couleurs, typographies, composants) est porté à l'identique
 du prototype de référence (`marge-prototype3.jsx`) et du cahier des charges
 v2 — voir `src/app/globals.css`.
 
-## État du projet — Phases 1, 2 & 3 livrées
+## État du projet — Phases 1 à 4 livrées
 
 ✅ **Authentification** (e-mail + mot de passe, connexion Google), avec
 inscription, connexion, déconnexion, mot de passe oublié / réinitialisation.
@@ -32,9 +32,13 @@ réactions (cœur) et commentaires sur chaque entrée, nouvelles entrées
 poussées en direct (Supabase Realtime) chez toutes les utilisatrices
 connectées.
 
-🏗️ **Phase 4 en cours** : modèle de données livré (Book Clubs, abonnements
-avec demande/acceptation, confidentialité) — [`0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql),
-UI à venir juste après.
+✅ **Book Clubs, abonnements et confidentialité** : créer un club (public ou
+privé), le rejoindre en un clic s'il est public ou sur invitation
+s'il est privé, messagerie de salon en temps réel, invitation par pseudo
+avec suggestions issues des abonnements ; abonnements instantanés à sens
+unique avec onglet « Qui me suit » ; les messages des clubs publics
+apparaissent dans le fil d'activité (clic dessus → ouvre le salon), ceux
+des clubs privés restent confinés au club.
 
 ## 1. Installer et lancer en local
 
@@ -66,7 +70,7 @@ sur ton projet**, il faut le faire manuellement une fois :
    - [`supabase/migrations/0002_books.sql`](./supabase/migrations/0002_books.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(déjà fait ✅)*
-   - [`supabase/migrations/0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql) *(nouveau — Phase 4, modèle de données)*
+   - [`supabase/migrations/0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql) *(déjà fait ✅)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -182,10 +186,12 @@ src/
     auth/callback/, auth/confirm/                          routes OAuth & liens e-mail
     page.tsx                                                accueil protégée (profil + étagères)
   components/
-    AppShell.tsx                                            état global (profil, étagères), en-tête, nav
+    AppShell.tsx                                            état global (profil, étagères, salons), en-tête, nav
     EtageresListe.tsx, AjouterLivrePanel.tsx                 sous-onglets, recherche/ajout manuel
     BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu, en cours)
     NotificationBell.tsx, ActivEntry.tsx                      cloche + panneau déroulant du fil d'activité
+    SalonsListe.tsx, SalonAccordion.tsx                       liste des clubs, création, accordéon (messages/membres)
+    AbonnementsSection.tsx                                    suivre par pseudo, mes abonnements, qui me suit
     icons/Etoile.tsx, icons/CodeBarres.tsx,                   pictogrammes dessinés à la main (SVG)
     icons/Cloche.tsx, icons/Coeur.tsx
     PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
@@ -193,15 +199,16 @@ src/
   lib/pseudo.ts, lib/shelf.ts, lib/googleBooks.ts              règles pseudo, types étagère, recherche Google Books
   lib/storage.ts                                                upload + validation des photos de couverture
   lib/activity.ts, lib/temps.ts                                 types du fil d'activité, formatage relatif des dates
+  lib/clubs.ts                                                  types Book Clubs, génération du code de classification
 supabase/migrations/
   0001_profiles.sql                                           comptes & création auto du profil (Phase 1)
   0002_books.sql                                               catalogue de livres & étagères (Phase 2)
   0003_storage_couvertures.sql                                bucket + policies pour les photos de couverture
   0004_activity_feed.sql                                      fil d'activité, réactions, commentaires, Realtime (Phase 3)
-  0005_clubs_follows.sql                                      Book Clubs, abonnements, confidentialité (Phase 4, modèle de données)
+  0005_clubs_follows.sql                                      Book Clubs, abonnements, confidentialité (Phase 4)
 ```
 
-## Notes de conception — Phase 4 (modèle de données)
+## Notes de conception — Phase 4
 
 Règles confirmées après clarification :
 
@@ -209,7 +216,7 @@ Règles confirmées après clarification :
   `statut` — un `insert` vaut abonnement immédiat, comme le prototype
   (façon Strava/Instagram). Le réseau est visible par toute utilisatrice
   connectée (RLS `using (true)` en lecture), pour permettre l'onglet
-  « Qui me suit » et d'éventuelles suggestions plus tard.
+  « Qui me suit ».
 - **Clubs publics = un clic, clubs privés = invitation** : la policy
   d'insertion sur `club_members` autorise soit une utilisatrice à
   s'ajouter elle-même directement si `clubs.prive = false` (statut
@@ -222,10 +229,22 @@ Règles confirmées après clarification :
   `club_members` qui doit vérifier l'appartenance à un club ne peut pas
   interroger `club_members` elle-même sans provoquer une récursion — la
   fonction contourne ça (même mécanisme que `handle_new_user` en Phase 1).
-- **UI pas encore branchée** : cette migration pose uniquement le schéma et
-  les policies, à la demande explicite (« modèle de données d'abord »). Les
-  écrans (créer/rejoindre un club, messagerie, gérer ses abonnements, onglet
-  « Qui me suit ») arrivent dans la foulée, une fois la migration validée.
+- **Messages de club privé exclus du fil global** : `activity_feed` est
+  visible par *toute* utilisatrice connectée (choix fait en Phase 3, pour
+  un fil simple non filtré par abonnements). Publier automatiquement
+  chaque message de club dans ce fil aurait donc fuité le nom et le
+  contenu d'un club privé à des personnes qui n'en sont pas membres — ce
+  que la confidentialité de la Phase 4 interdit explicitement. Résultat :
+  seuls les messages des clubs **publics** sont mirroités dans le fil
+  (`activity_feed.type = 'message'`) ; ceux des clubs privés restent
+  visibles uniquement via `club_messages`, à ses membres. Cliquer sur une
+  entrée de message dans le fil ouvre directement le salon correspondant.
+- **Suggestions d'invitation** : dans un club ouvert, les personnes que tu
+  suis et qui n'en sont pas déjà membres apparaissent comme raccourcis
+  d'invitation (« + pseudo »), comme dans le prototype.
+- **Compteurs Abonnements / Abonnés** : désormais branchés sur les vraies
+  données dans la barre de stats du profil (`AbonnementsSection` remonte
+  les comptes à `AppShell` une fois chargés).
 
 ## Notes de conception — Phase 3
 

@@ -5,6 +5,7 @@ import { Coeur } from "@/components/icons/Coeur";
 import { Etoile } from "@/components/icons/Etoile";
 import { relatif } from "@/lib/temps";
 import type {
+  ContenuMessage,
   ContenuMoment,
   ContenuTermine,
   EntreeActivite,
@@ -13,6 +14,7 @@ import type {
 function couleurBarre(type: EntreeActivite["type"]) {
   if (type === "termine") return "var(--plot-accent)";
   if (type === "moment") return "var(--plot-violet)";
+  if (type === "message") return "var(--plot-blue)";
   return "var(--plot-accent-2)";
 }
 
@@ -20,10 +22,12 @@ export function ActivEntry({
   entree,
   onReagir,
   onCommenter,
+  onOuvrirSalon,
 }: {
   entree: EntreeActivite;
   onReagir: (id: string) => void;
   onCommenter: (id: string, texte: string) => Promise<void>;
+  onOuvrirSalon?: (clubId: string) => void;
 }) {
   const [ouvrirCommentaires, setOuvrirCommentaires] = useState(false);
   const [brouillon, setBrouillon] = useState("");
@@ -67,6 +71,16 @@ export function ActivEntry({
         </span>
         <span className="plot-moment-citation">&laquo; {c.texte} &raquo;</span>
       </>
+    );
+  } else if (entree.type === "message") {
+    const c = entree.contenu as ContenuMessage;
+    corps = (
+      <div className="plot-activ-clic" onClick={() => onOuvrirSalon?.(c.clubId)}>
+        <span className="plot-activ-ligne">
+          <strong>{entree.pseudo}</strong> a écrit dans <strong>{c.nom}</strong>
+        </span>
+        <span className="plot-activ-extrait">&laquo; {c.texte} &raquo;</span>
+      </div>
     );
   } else {
     const c = entree.contenu as ContenuMoment;

@@ -15,9 +15,11 @@ import {
 export function NotificationBell({
   profilId,
   pseudo,
+  onOuvrirSalon,
 }: {
   profilId: string;
   pseudo: string;
+  onOuvrirSalon?: (clubId: string) => void;
 }) {
   const supabase = createClient();
 
@@ -217,6 +219,11 @@ export function NotificationBell({
     );
   }
 
+  function ouvrirSalon(clubId: string) {
+    setOuvert(false);
+    onOuvrirSalon?.(clubId);
+  }
+
   return (
     <div className="plot-cloche-wrap" ref={conteneurRef}>
       <button
@@ -239,7 +246,13 @@ export function NotificationBell({
             )}
             {!chargement &&
               entrees.map((e) => (
-                <ActivEntry key={e.id} entree={e} onReagir={reagir} onCommenter={commenter} />
+                <ActivEntry
+                  key={e.id}
+                  entree={e}
+                  onReagir={reagir}
+                  onCommenter={commenter}
+                  onOuvrirSalon={ouvrirSalon}
+                />
               ))}
           </div>
         </div>
