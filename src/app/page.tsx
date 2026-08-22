@@ -20,7 +20,7 @@ export default async function Home() {
       supabase
         .from("user_books")
         .select(
-          "id, statut, note, dernier_moment, livre:books(id, titre, auteur, couverture_url, pages)"
+          "id, statut, note, dernier_moment, commence_le, termine_le, livre:books(id, titre, auteur, couverture_url, pages)"
         )
         .eq("user_id", user.id)
         .order("created_at", { ascending: false })

@@ -8,3 +8,11 @@ export function relatif(iso: string) {
   const j = Math.round(diff / 86400000);
   return `il y a ${j} j`;
 }
+
+/** "depuis aujourd'hui" / "depuis 1 jour" / "depuis 5 jours" */
+export function depuis(iso: string) {
+  const j = Math.floor((Date.now() - new Date(iso).getTime()) / 86400000);
+  if (j <= 0) return "depuis aujourd'hui";
+  if (j === 1) return "depuis 1 jour";
+  return `depuis ${j} jours`;
+}

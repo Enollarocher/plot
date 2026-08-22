@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Avatar } from "@/components/Avatar";
 import { normaliserPseudo } from "@/lib/pseudo";
@@ -113,7 +114,9 @@ export function AbonnementsSection({
       <div className="plot-membres-liste">
         {abonnements.map((a) => (
           <span key={a.id} className="plot-chip">
-            <Avatar pseudo={a.pseudo} size={20} /> {a.pseudo}
+            <Link href={`/profil/${a.pseudo}`} className="plot-chip-lien">
+              <Avatar pseudo={a.pseudo} size={20} /> {a.pseudo}
+            </Link>
             <button
               className="plot-chip-retirer"
               onClick={() => retirer(a.id)}
@@ -144,9 +147,9 @@ export function AbonnementsSection({
       <p className="plot-membres-titre plot-membres-titre-espace">Qui me suit</p>
       <div className="plot-membres-liste">
         {abonnes.map((a) => (
-          <span key={a.id} className="plot-chip">
+          <Link key={a.id} href={`/profil/${a.pseudo}`} className="plot-chip">
             <Avatar pseudo={a.pseudo} size={20} /> {a.pseudo}
-          </span>
+          </Link>
         ))}
         {!chargement && abonnes.length === 0 && (
           <span className="plot-par">Personne pour l&apos;instant.</span>

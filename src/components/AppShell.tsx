@@ -1,24 +1,19 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabase/client";
-import { normaliserPseudo, pseudoValide, PSEUDO_AIDE } from "@/lib/pseudo";
 import { PlotMark } from "@/components/PlotMark";
-import { Avatar } from "@/components/Avatar";
 import { EtageresListe } from "@/components/EtageresListe";
 import { NotificationBell } from "@/components/NotificationBell";
 import { SalonsListe } from "@/components/SalonsListe";
 import { AbonnementsSection } from "@/components/AbonnementsSection";
+import { ProfilEditable, type Profil } from "@/components/ProfilEditable";
 import type { DonneesAjoutManuel, LivreEtagere } from "@/lib/shelf";
 import type { ResultatRecherche } from "@/lib/googleBooks";
 import { televerserCouverture } from "@/lib/storage";
 
-export type Profil = {
-  id: string;
-  pseudo: string;
-  bio: string;
-};
+export type { Profil };
 
 type Onglet = "etageres" | "salons";
 
@@ -43,6 +38,9 @@ export function AppShell({
     etagereInitiale.filter((l) => l.statut === "en_cours")
   );
   const [lu, setLu] = useState(etagereInitiale.filter((l) => l.statut === "lu"));
+  const [abandonnes, setAbandonnes] = useState(
+    etagereInitiale.filter((l) => l.statut === "abandonne")
+  );
   const [erreurEtagere, setErreurEtagere] = useState("");
 
   const [salonOuvert, setSalonOuvert] = useState<string | null>(null);
@@ -76,7 +74,7 @@ export function AppShell({
     const { data, error } = await supabase
       .from("user_books")
       .insert({ user_id: profil.id, book_id: livre.id, statut: "envie" })
-      .select("id, statut, note, dernier_moment")
+      .select("id, statut, note, dernier_moment, commence_le, termine_le")
       .single();
 
     if (error || !data) {
@@ -93,6 +91,8 @@ export function AppShell({
       statut: "envie",
       note: data.note,
       dernierMoment: data.dernier_moment,
+      commenceLe: data.commence_le,
+      termineLe: data.termine_le,
       livre: {
         id: livre.id,
         titre: livre.titre,
@@ -116,6 +116,7 @@ export function AppShell({
           couverture_url: item.couverture,
           pages: item.pages,
           isbn: item.isbn,
+          resume: item.resume,
         },
         { onConflict: "google_volume_id" }
       )
@@ -174,12 +175,13 @@ export function AppShell({
     const item = envie.find((i) => i.id === id);
     if (!item) return;
 
+    const maintenant = new Date().toISOString();
     setEnvie((l) => l.filter((i) => i.id !== id));
-    setEnCours((l) => [{ ...item, statut: "en_cours" }, ...l]);
+    setEnCours((l) => [{ ...item, statut: "en_cours", commenceLe: maintenant }, ...l]);
 
     const { error } = await supabase
       .from("user_books")
-      .update({ statut: "en_cours" })
+      .update({ statut: "en_cours", commence_le: maintenant })
       .eq("id", id);
 
     if (error) {
@@ -217,12 +219,13 @@ export function AppShell({
     const item = enCours.find((i) => i.id === id);
     if (!item) return;
 
+    const maintenant = new Date().toISOString();
     setEnCours((l) => l.filter((i) => i.id !== id));
-    setLu((l) => [{ ...item, statut: "lu", note }, ...l]);
+    setLu((l) => [{ ...item, statut: "lu", note, termineLe: maintenant }, ...l]);
 
     const { error } = await supabase
       .from("user_books")
-      .update({ statut: "lu", note })
+      .update({ statut: "lu", note, termine_le: maintenant })
       .eq("id", id);
 
     if (error) {
@@ -242,6 +245,26 @@ export function AppShell({
       type: "termine",
       contenu: { titre: item.livre.titre, bookId: item.livre.id, note, heure },
     });
+  }
+
+  async function abandonnerLecture(id: string) {
+    const item = enCours.find((i) => i.id === id);
+    if (!item) return;
+
+    const maintenant = new Date().toISOString();
+    setEnCours((l) => l.filter((i) => i.id !== id));
+    setAbandonnes((l) => [{ ...item, statut: "abandonne", termineLe: maintenant }, ...l]);
+
+    const { error } = await supabase
+      .from("user_books")
+      .update({ statut: "abandonne", termine_le: maintenant })
+      .eq("id", id);
+
+    if (error) {
+      setAbandonnes((l) => l.filter((i) => i.id !== id));
+      setEnCours((l) => [item, ...l]);
+      setErreurEtagere("Impossible d'abandonner ce livre, réessaie.");
+    }
   }
 
   return (
@@ -283,14 +306,16 @@ export function AppShell({
       <div className="plot-shell">
         {onglet === "etageres" && (
           <section>
-            <ProfilSection
+            <ProfilEditable
               profil={profil}
               onProfilChange={setProfil}
               nbLu={lu.length}
               nbEnCours={enCours.length}
               nbEnvie={envie.length}
+              nbAbandonnes={abandonnes.length}
               nbAbonnements={nbAbonnements}
               nbAbonnes={nbAbonnes}
+              lienProfilComplet
             />
             <AbonnementsSection
               profilId={profil.id}
@@ -304,9 +329,11 @@ export function AppShell({
               envie={envie}
               enCours={enCours}
               lu={lu}
+              abandonnes={abandonnes}
               onCommencer={commencerLecture}
               onMoment={ajouterMoment}
               onTerminer={terminerLecture}
+              onAbandonner={abandonnerLecture}
               onAjouterResultat={ajouterResultat}
               onAjouterManuel={ajouterManuel}
             />
@@ -322,170 +349,5 @@ export function AppShell({
         )}
       </div>
     </div>
-  );
-}
-
-function ProfilSection({
-  profil,
-  onProfilChange,
-  nbLu,
-  nbEnCours,
-  nbEnvie,
-  nbAbonnements,
-  nbAbonnes,
-}: {
-  profil: Profil;
-  onProfilChange: (p: Profil) => void;
-  nbLu: number;
-  nbEnCours: number;
-  nbEnvie: number;
-  nbAbonnements: number;
-  nbAbonnes: number;
-}) {
-  const supabase = createClient();
-
-  const [editionNom, setEditionNom] = useState(false);
-  const [brouillonNom, setBrouillonNom] = useState(profil.pseudo);
-  const [erreurNom, setErreurNom] = useState("");
-
-  const [editionBio, setEditionBio] = useState(false);
-  const [brouillonBio, setBrouillonBio] = useState(profil.bio);
-  const [erreurBio, setErreurBio] = useState("");
-
-  const enregistrementEnCours = useRef(false);
-
-  async function enregistrerNom() {
-    const p = normaliserPseudo(brouillonNom);
-    setEditionNom(false);
-
-    if (p === profil.pseudo) return;
-
-    if (!pseudoValide(p)) {
-      setErreurNom("Pseudo invalide : " + PSEUDO_AIDE);
-      setBrouillonNom(profil.pseudo);
-      return;
-    }
-    if (enregistrementEnCours.current) return;
-    enregistrementEnCours.current = true;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ pseudo: p })
-      .eq("id", profil.id);
-
-    enregistrementEnCours.current = false;
-
-    if (error) {
-      setErreurNom(
-        error.code === "23505"
-          ? "Ce pseudo est déjà pris."
-          : "Impossible d'enregistrer ce pseudo."
-      );
-      setBrouillonNom(profil.pseudo);
-      return;
-    }
-
-    setErreurNom("");
-    onProfilChange({ ...profil, pseudo: p });
-  }
-
-  async function enregistrerBio() {
-    const bio = brouillonBio.trim().slice(0, 280);
-    setEditionBio(false);
-
-    if (bio === profil.bio) return;
-
-    const { error } = await supabase
-      .from("profiles")
-      .update({ bio })
-      .eq("id", profil.id);
-
-    if (error) {
-      setErreurBio("Impossible d'enregistrer la bio.");
-      setBrouillonBio(profil.bio);
-      return;
-    }
-
-    setErreurBio("");
-    onProfilChange({ ...profil, bio });
-  }
-
-  return (
-    <>
-      <div className="plot-profil">
-        <Avatar pseudo={profil.pseudo} size={48} />
-        <div style={{ flex: 1, minWidth: 0 }}>
-          {editionNom ? (
-            <input
-              className="plot-profil-nom-input"
-              value={brouillonNom}
-              autoFocus
-              onChange={(e) => setBrouillonNom(e.target.value)}
-              onBlur={enregistrerNom}
-              onKeyDown={(e) => e.key === "Enter" && e.currentTarget.blur()}
-            />
-          ) : (
-            <button
-              className="plot-profil-nom"
-              onClick={() => {
-                setBrouillonNom(profil.pseudo);
-                setEditionNom(true);
-              }}
-              title="Modifier ton pseudo"
-            >
-              {profil.pseudo}
-            </button>
-          )}
-          {erreurNom && <p className="plot-profil-champ-erreur">{erreurNom}</p>}
-
-          {editionBio ? (
-            <textarea
-              className="plot-profil-bio-input"
-              value={brouillonBio}
-              autoFocus
-              rows={2}
-              maxLength={280}
-              onChange={(e) => setBrouillonBio(e.target.value)}
-              onBlur={enregistrerBio}
-            />
-          ) : (
-            <button
-              className="plot-profil-bio"
-              onClick={() => {
-                setBrouillonBio(profil.bio);
-                setEditionBio(true);
-              }}
-              title="Modifier ta bio"
-            >
-              {profil.bio || "Ajouter une bio..."}
-            </button>
-          )}
-          {erreurBio && <p className="plot-profil-champ-erreur">{erreurBio}</p>}
-        </div>
-      </div>
-
-      <div className="plot-stats">
-        <div>
-          <span className="plot-stat-n">{nbLu}</span>
-          <span className="plot-stat-l">Lus</span>
-        </div>
-        <div>
-          <span className="plot-stat-n">{nbEnCours}</span>
-          <span className="plot-stat-l">En cours</span>
-        </div>
-        <div>
-          <span className="plot-stat-n">{nbEnvie}</span>
-          <span className="plot-stat-l">Envie de lire</span>
-        </div>
-        <div>
-          <span className="plot-stat-n">{nbAbonnements}</span>
-          <span className="plot-stat-l">Abonnements</span>
-        </div>
-        <div>
-          <span className="plot-stat-n">{nbAbonnes}</span>
-          <span className="plot-stat-l">Abonnés</span>
-        </div>
-      </div>
-    </>
   );
 }

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { Coeur } from "@/components/icons/Coeur";
 import { Etoile } from "@/components/icons/Etoile";
 import { relatif } from "@/lib/temps";
@@ -16,6 +17,15 @@ function couleurBarre(type: EntreeActivite["type"]) {
   if (type === "moment") return "var(--plot-violet)";
   if (type === "message") return "var(--plot-blue)";
   return "var(--plot-accent-2)";
+}
+
+function TitreLivre({ titre, bookId }: { titre: string; bookId?: string }) {
+  if (!bookId) return <em>{titre}</em>;
+  return (
+    <Link href={`/livre/${bookId}`} className="plot-lien-livre">
+      <em>{titre}</em>
+    </Link>
+  );
 }
 
 export function ActivEntry({
@@ -50,7 +60,15 @@ export function ActivEntry({
         <span className="plot-activ-ligne">
           <strong>{entree.pseudo}</strong> vient de terminer
         </span>
-        <span className="plot-activ-livre">{c.titre}</span>
+        <span className="plot-activ-livre">
+          {c.bookId ? (
+            <Link href={`/livre/${c.bookId}`} className="plot-lien-livre">
+              {c.titre}
+            </Link>
+          ) : (
+            c.titre
+          )}
+        </span>
         <span className="plot-etoiles">
           {[1, 2, 3, 4, 5].map((n) => (
             <Etoile key={n} pleine={n <= c.note} taille={12} />
@@ -67,7 +85,7 @@ export function ActivEntry({
       <>
         <span className="plot-activ-ligne">
           <strong>{entree.pseudo}</strong> partage un Plot Moment sur{" "}
-          <em>{c.titre}</em>
+          <TitreLivre titre={c.titre} bookId={c.bookId} />
         </span>
         <span className="plot-moment-citation">&laquo; {c.texte} &raquo;</span>
       </>
@@ -86,7 +104,7 @@ export function ActivEntry({
     const c = entree.contenu as ContenuMoment;
     corps = (
       <span className="plot-activ-ligne">
-        <strong>{entree.pseudo}</strong> commence <em>{c.titre}</em>
+        <strong>{entree.pseudo}</strong> commence <TitreLivre titre={c.titre} bookId={c.bookId} />
       </span>
     );
   }

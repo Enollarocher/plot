@@ -5,6 +5,7 @@ export type ResultatRecherche = {
   pages: number | null;
   couverture: string | null;
   isbn: string | null;
+  resume: string | null;
 };
 
 export type PageResultats = {
@@ -18,6 +19,7 @@ type VolumeGoogleBooks = {
     title?: string;
     authors?: string[];
     pageCount?: number;
+    description?: string;
     imageLinks?: { thumbnail?: string; smallThumbnail?: string };
     industryIdentifiers?: { type: string; identifier: string }[];
   };
@@ -42,6 +44,7 @@ function versResultat(item: VolumeGoogleBooks): ResultatRecherche {
       ? couvertureBrute.replace("http://", "https://")
       : null,
     isbn,
+    resume: info.description || null,
   };
 }
 

@@ -1,4 +1,11 @@
-export type Statut = "envie" | "en_cours" | "lu";
+export type Statut = "envie" | "en_cours" | "lu" | "abandonne";
+
+export const LIBELLE_STATUT: Record<Statut, string> = {
+  envie: "Envie de lire",
+  en_cours: "En cours",
+  lu: "Lu",
+  abandonne: "Abandonné",
+};
 
 export type Livre = {
   id: string;
@@ -22,6 +29,8 @@ export type LivreEtagere = {
   statut: Statut;
   note: number | null;
   dernierMoment: string | null;
+  commenceLe: string | null;
+  termineLe: string | null;
   livre: Livre;
 };
 
@@ -39,6 +48,8 @@ export type LigneUserBookBrute = {
   statut: Statut;
   note: number | null;
   dernier_moment: string | null;
+  commence_le: string | null;
+  termine_le: string | null;
   livre: {
     id: string;
     titre: string;
@@ -55,6 +66,8 @@ export function versLivreEtagere(ligne: LigneUserBookBrute): LivreEtagere | null
     statut: ligne.statut,
     note: ligne.note,
     dernierMoment: ligne.dernier_moment,
+    commenceLe: ligne.commence_le,
+    termineLe: ligne.termine_le,
     livre: {
       id: ligne.livre.id,
       titre: ligne.livre.titre,

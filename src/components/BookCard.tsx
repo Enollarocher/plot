@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { BookCover } from "@/components/BookCover";
 import type { LivreEtagere } from "@/lib/shelf";
 
@@ -30,16 +31,20 @@ export function BookCard({
       <div className="plot-card-corps">
         <BookCover couverture={livre.couverture} graine={livre.id} />
         <div className="plot-card-texte">
-          <p className="plot-titre">{livre.titre}</p>
+          <Link href={`/livre/${livre.id}`} className="plot-titre plot-titre-lien">
+            {livre.titre}
+          </Link>
           <p className="plot-auteur">
             {livre.auteur}
             {livre.pages ? ` · ${livre.pages} p.` : ""}
           </p>
-          {item.statut === "lu" ? (
-            item.dernierMoment && (
-              <p className="plot-note">&laquo; {item.dernierMoment} &raquo;</p>
-            )
-          ) : (
+          {item.statut === "lu" && item.dernierMoment && (
+            <p className="plot-note">&laquo; {item.dernierMoment} &raquo;</p>
+          )}
+          {item.statut === "abandonne" && (
+            <span className="plot-par">Abandonné</span>
+          )}
+          {item.statut === "envie" && (
             <div className="plot-envie-footer">
               <span className="plot-par">Ajouté par toi</span>
               {onCommencer && (

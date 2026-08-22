@@ -49,6 +49,22 @@ mélange de quelques résultats.
 `BarcodeDetector`), avec repli automatique et invisible sur la saisie
 manuelle quand le navigateur ne le prend pas en charge (Safari/iOS
 notamment).
+✅ **Page profil d'un livre** (`/livre/[id]`) : couverture, auteur, résumé,
+et qui parmi tes abonnements l'a lu / est en train de le lire / l'a
+abandonné, avec sa note si disponible. Accessible en cliquant un titre
+n'importe où (étagères, fil d'activité).
+✅ **Page profil d'une utilisatrice** (`/profil/[pseudo]`) : avatar, bio,
+statistiques (Lus / En cours / Envie de lire / Abandonnés / Abonnements /
+Abonnés), listes consultables de « Mes abonnements » et « Qui me suit »,
+objectifs de lecture. Pour le profil de quelqu'un d'autre : bouton
+Suivre/Se désabonner, étagère et stats visibles seulement si tu la suis.
+✅ **Statut « Abandonné » (DNF)** : quatrième statut d'étagère, accessible
+depuis « En cours » à côté de « Terminer la lecture ».
+✅ **Objectifs de lecture** : se fixer un nombre de livres sur une période
+(ex. un défi annuel), barre de progression basée sur les livres marqués
+Lus dans cette période.
+✅ **Durée de lecture** : « depuis N jours » affiché sur chaque livre « En
+cours ».
 
 ## 1. Installer et lancer en local
 
@@ -81,7 +97,8 @@ sur ton projet**, il faut le faire manuellement une fois :
    - [`supabase/migrations/0003_storage_couvertures.sql`](./supabase/migrations/0003_storage_couvertures.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0004_activity_feed.sql`](./supabase/migrations/0004_activity_feed.sql) *(déjà fait ✅)*
    - [`supabase/migrations/0005_clubs_follows.sql`](./supabase/migrations/0005_clubs_follows.sql) *(déjà fait ✅)*
-   - [`supabase/migrations/0006_club_roles.sql`](./supabase/migrations/0006_club_roles.sql) *(nouveau)*
+   - [`supabase/migrations/0006_club_roles.sql`](./supabase/migrations/0006_club_roles.sql) *(déjà fait ✅)*
+   - [`supabase/migrations/0007_livre_profil_objectifs.sql`](./supabase/migrations/0007_livre_profil_objectifs.sql) *(nouveau)*
 
 `0001_profiles.sql` crée :
 - la table `profiles` (`id`, `pseudo` unique, `bio`, horodatages) avec RLS
@@ -148,7 +165,22 @@ sur ton projet**, il faut le faire manuellement une fois :
   peuvent pas publier de message (`club_messages` policy d'insertion mise
   à jour).
 
-Les six scripts sont idempotents : tu peux les rejouer sans risque.
+`0007_livre_profil_objectifs.sql` crée :
+- le statut `abandonne` sur `user_books.statut` ;
+- `user_books.commence_le` / `termine_le`, posés par l'app au changement de
+  statut (pas de report sur `updated_at`, qui bouge aussi pour un Plot
+  Moment) — avec un remplissage best-effort pour les lignes déjà
+  existantes ;
+- **`user_books` devient lisible par tes abonnements**, pas seulement par
+  toi (`select` seulement — `insert`/`update`/`delete` restent strictement
+  privés). Nécessaire pour « qui de tes abonnements a lu ce livre » sur la
+  page profil d'un livre : sans ce changement, `user_books` était
+  strictement privée depuis la Phase 2 (choix par défaut avant que les
+  abonnements existent) ;
+- la table `objectifs_lecture` (cible, période), privée à chaque
+  utilisatrice.
+
+Les sept scripts sont idempotents : tu peux les rejouer sans risque.
 
 ⚠️ Si Realtime est explicitement désactivé sur ton projet (Database →
 Replication), active-le pour `activity_feed` et `club_messages` — la cloche
@@ -206,22 +238,29 @@ src/
     login/, signup/, forgot-password/, update-password/   pages publiques
     auth/callback/, auth/confirm/                          routes OAuth & liens e-mail
     page.tsx                                                accueil protégée (profil + étagères)
+    livre/[id]/                                             page profil d'un livre
+    profil/, profil/[pseudo]/                               redirection vers son profil, page profil d'une utilisatrice
   components/
     AppShell.tsx                                            état global (profil, étagères, salons), en-tête, nav
     EtageresListe.tsx, AjouterLivrePanel.tsx                 sous-onglets, recherche/ajout manuel
-    BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu, en cours)
+    BookCard.tsx, EncoursCard.tsx, BookCover.tsx              cartes de livre (envie/lu/abandonné, en cours)
     NotificationBell.tsx, ActivEntry.tsx                      cloche + panneau déroulant du fil d'activité
     SalonsListe.tsx, SalonAccordion.tsx                       liste des clubs, création, accordéon (messages/membres/rôles)
     AbonnementsSection.tsx                                    suivre par pseudo, mes abonnements, qui me suit
     BarcodeScanner.tsx                                        scan ISBN (BarcodeDetector), avec repli manuel
+    ProfilEditable.tsx                                        avatar/pseudo/bio/stats éditables (partagé Étagères + page profil)
+    MonProfilVue.tsx, ProfilLectureSeule.tsx                  page profil : soi-même (éditable) vs quelqu'un d'autre (lecture seule + Suivre)
+    ObjectifsLecture.tsx                                      créer un objectif, barre de progression
+    EnTeteSimple.tsx                                          en-tête léger (livre, profil) avec lien retour
     icons/Etoile.tsx, icons/CodeBarres.tsx,                   pictogrammes dessinés à la main (SVG)
     icons/Cloche.tsx, icons/Coeur.tsx
     PlotMark.tsx, Avatar.tsx, GoogleAuthButton.tsx
   lib/supabase/                                               clients browser/server + middleware de session
   lib/pseudo.ts, lib/shelf.ts, lib/googleBooks.ts              règles pseudo, types étagère, recherche Google Books
   lib/storage.ts                                                upload + validation des photos de couverture
-  lib/activity.ts, lib/temps.ts                                 types du fil d'activité, formatage relatif des dates
+  lib/activity.ts, lib/temps.ts                                 types du fil d'activité, formatage relatif/durée
   lib/clubs.ts                                                  types Book Clubs, génération du code de classification
+  lib/goals.ts                                                  types objectifs de lecture, calcul de progression
 supabase/migrations/
   0001_profiles.sql                                           comptes & création auto du profil (Phase 1)
   0002_books.sql                                               catalogue de livres & étagères (Phase 2)
@@ -229,9 +268,43 @@ supabase/migrations/
   0004_activity_feed.sql                                      fil d'activité, réactions, commentaires, Realtime (Phase 3)
   0005_clubs_follows.sql                                      Book Clubs, abonnements, confidentialité (Phase 4)
   0006_club_roles.sql                                         rôles administratrice / membre / observateur
+  0007_livre_profil_objectifs.sql                             DNF, durée de lecture, étagère visible par les abonnements, objectifs
 ```
 
-## Notes de conception — après la Phase 4
+## Notes de conception — page livre, page profil, DNF, objectifs, durée
+
+- **`user_books` ouverte aux abonnements (lecture seule)** : c'était le
+  changement de modèle de données manquant pour « qui a lu ce livre » —
+  voir le détail dans la description de `0007` ci-dessus. Écriture toujours
+  strictement privée.
+- **Stats d'une autre utilisatrice masquées si tu ne la suis pas** : sans
+  ça, `user_books` renvoie un tableau vide pour une inconnue (RLS), ce qui
+  afficherait des statistiques à 0 identiques à quelqu'un qui n'a
+  vraiment rien lu — trompeur. La page profil distingue les deux avec un
+  message « Suis {pseudo} pour voir son étagère » plutôt que de mentir
+  avec des zéros.
+- **Résumé absent pour les livres déjà ajoutés par recherche** : avant ce
+  tour, `ajouterResultat` ne récupérait pas `volumeInfo.description` de
+  Google Books (seul l'ajout manuel remplissait `resume`). Corrigé pour
+  les nouveaux ajouts ; les livres déjà en base sans résumé affichent
+  « Pas de résumé disponible pour ce livre. » — pas de ré-import
+  rétroactif possible depuis une migration SQL.
+- **`commence_le` / `termine_le` plutôt que `updated_at`** : `updated_at`
+  bouge aussi quand on poste un Plot Moment sur un livre « en cours », ce
+  qui aurait faussé « depuis combien de temps ». Deux horodatages dédiés,
+  posés explicitement par l'app au changement de statut.
+- **Abandonner ne publie rien dans le fil** : contrairement à commencer/
+  terminer un livre, abandonner reste discret (pas d'entrée
+  `activity_feed`) — non demandé, et probablement plus délicat à exposer
+  automatiquement aux abonnements.
+- **Objectifs de lecture strictement privés** : pas de policy de partage
+  avec les abonnements pour l'instant (non demandé) ; seule la
+  propriétaire voit et gère ses objectifs.
+- **Bonus non demandé mais cohérent** : bouton Suivre/Se désabonner
+  directement sur la page profil de quelqu'un d'autre (réutilise la même
+  logique que le champ « Suivre un pseudo » déjà existant), et les titres
+  de livres sont maintenant cliquables partout où ils apparaissent
+  (étagères, fil d'activité) vers leur page profil.
 
 - **Recherche par auteur** : `lib/googleBooks.ts` a un `rechercherParAuteur()`
   dédié, qui construit `q=inauthor:"<nom>"` (guillemets pour éviter que
