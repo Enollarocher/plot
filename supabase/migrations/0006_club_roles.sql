@@ -13,11 +13,15 @@
 -- "createur", qui n'existait que pour la distinguer sans lui donner de
 -- pouvoir réel).
 
--- 0. Migration des données existantes avant de resserrer la contrainte ----------
+-- 0/1. Ancienne contrainte retirée D'ABORD, puis migration des données -----------
+-- L'ancienne contrainte (posée par 0005) n'autorisait que ('createur',
+-- 'membre') : mettre à jour role = 'administrateur' avant de l'avoir
+-- supprimée la viole immédiatement (elle ne connaît pas encore cette
+-- valeur). Il faut la retirer avant de toucher aux données.
+alter table public.club_members drop constraint if exists club_members_role_valide;
+
 update public.club_members set role = 'administrateur' where role = 'createur';
 
--- 1. Nouvelle contrainte de rôle ------------------------------------------------
-alter table public.club_members drop constraint if exists club_members_role_valide;
 alter table public.club_members
   add constraint club_members_role_valide
   check (role in ('administrateur', 'membre', 'observateur'));
